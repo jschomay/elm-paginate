@@ -1,0 +1,78 @@
+[
+  {
+    "name": "Paginate",
+    "comment": " Separate the presentation-domain concerns of pagination from the business-domain of your data.\n\n# The Pager type\n@docs Pager\n\n# Constructing and updating\n@docs init,update\n\n# Changing pages\n@docs goTo, next, prev, first, last\n\n# Paginating\n@docs page\n\n# Accessors\n@docs currentPage, itemsPerPage, totalPages\n\n# Rendering\n@docs toList\n",
+    "aliases": [],
+    "types": [
+      {
+        "name": "Pager",
+        "comment": " The `Pager` type holds all of the information necessary to track your pagination without directly affecting your data.\n",
+        "args": [],
+        "cases": []
+      }
+    ],
+    "values": [
+      {
+        "name": "currentPage",
+        "comment": " Get the current page of the `Pager`\n",
+        "type": "Paginate.Pager -> Int"
+      },
+      {
+        "name": "first",
+        "comment": " Go to the first page.\n",
+        "type": "Paginate.Pager -> Paginate.Pager"
+      },
+      {
+        "name": "goTo",
+        "comment": " Set the current page directly.  If the specified page is \"out of bounds\" of the pager, it will be set to the first or last page accordingly.\n",
+        "type": "Int -> Paginate.Pager -> Paginate.Pager"
+      },
+      {
+        "name": "init",
+        "comment": " Create a new pager.  Pass it the desired number of items per page and total number of items to be paginated.  The current page is always initialized to 1.  The number of items per page will be set to 1 if you provide 0 or a negative number.\n\n      init 10 (List.length allMyThings)\n          |> currentPage\n      -- (equals 1)\n\n",
+        "type": "Int -> Int -> Paginate.Pager"
+      },
+      {
+        "name": "itemsPerPage",
+        "comment": " Get the number of items per page\n",
+        "type": "Paginate.Pager -> Int"
+      },
+      {
+        "name": "last",
+        "comment": " Go to the last page.\n",
+        "type": "Paginate.Pager -> Paginate.Pager"
+      },
+      {
+        "name": "next",
+        "comment": " Go to the next page.  If you already on the last page, next has no effect.\n",
+        "type": "Paginate.Pager -> Paginate.Pager"
+      },
+      {
+        "name": "page",
+        "comment": " Provide a list and you will get the \"slice\" of that list according to the pager's state.\n\n    page (goTo 3 <| init 10 100) (List.range 1 100)\n    -- (equals [31, 32, 33, 34, 35, 36, 37, 38, 39 40])\n\n",
+        "type": "Paginate.Pager -> List a -> List a"
+      },
+      {
+        "name": "prev",
+        "comment": " Go to the previous page.  If you already on the first page, prev has no effect.\n",
+        "type": "Paginate.Pager -> Paginate.Pager"
+      },
+      {
+        "name": "toList",
+        "comment": " Turn your pager into a list.  Usually you will do this when you want to render a view for your pager, but it could be a list of anything.  The supplied function is given the current page number being iterated over and whether that page is the current page of the pager or not.\n\n    init 1 3\n        |> next\n        |> toList ((,))\n    -- (equals [(1,False),(2,True),(3,False)])\n\n",
+        "type": "(Int -> Bool -> a) -> Paginate.Pager -> List a"
+      },
+      {
+        "name": "totalPages",
+        "comment": " Get the total number of pages\n",
+        "type": "Paginate.Pager -> Int"
+      },
+      {
+        "name": "update",
+        "comment": " Update a pager by passing in the new items per page and new total number of items to be paginated.  You would want to do this any time the number of items in the data you are paginating changes or if you want a different page size.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.\n",
+        "type": "Int -> Int -> Paginate.Pager -> Paginate.Pager"
+      }
+    ],
+    "generated-with-elm-version": "0.18.0"
+  }
+]
