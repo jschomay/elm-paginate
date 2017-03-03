@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "summary": "Simple and robust pagination in elm",
     "repository": "https://github.com/jschomay/elm-paginate.git",
     "license": "BSD3",
