@@ -65,7 +65,7 @@ all =
         , describe "page"
             [ test "gives the correct slice of a list" <|
                 \_ ->
-                    Expect.equal (List.range 31 40) (page (goTo 3 <| init 10 100) (List.range 1 100))
+                    Expect.equal (List.range 21 30) (page (goTo 3 <| init 10 100) (List.range 1 100))
             , fuzz3 int int int "the slice is never more than the pagination size" <|
                 \itemsPerPage totalItems_ pageNum ->
                     let

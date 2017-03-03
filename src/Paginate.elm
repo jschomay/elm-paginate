@@ -112,13 +112,13 @@ last pager =
 {-| Provide a list and you will get the "slice" of that list according to the pager's state.
 
     page (goTo 3 <| init 10 100) (List.range 1 100)
-    -- (equals [31, 32, 33, 34, 35, 36, 37, 38, 39 40])
+    -- (equals [21, 22, 23, 24, 25, 26, 27, 28, 29 30])
 
 -}
 page : Pager -> List a -> List a
 page (Pager { itemsPerPage, currentPage }) list =
     list
-        |> List.drop (Bounded.value currentPage * itemsPerPage)
+        |> List.drop ((Bounded.value currentPage - 1) * itemsPerPage)
         |> List.take (itemsPerPage)
 
 
