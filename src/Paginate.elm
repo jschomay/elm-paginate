@@ -12,6 +12,8 @@ module Paginate
         , currentPage
         , itemsPerPage
         , totalPages
+        , isFirst
+        , isLast
         , toList
         )
 
@@ -30,7 +32,7 @@ module Paginate
 @docs page
 
 # Accessors
-@docs currentPage, itemsPerPage, totalPages
+@docs currentPage, itemsPerPage, totalPages, isFirst, isLast
 
 # Rendering
 @docs toList
@@ -107,6 +109,20 @@ first pager =
 last : Pager -> Pager
 last pager =
     goTo (totalPages pager) pager
+
+
+{-| Useful to conditionally show a "prev" button.
+-}
+isFirst : Pager -> Bool
+isFirst (Pager { currentPage }) =
+    Bounded.value currentPage == 1
+
+
+{-| Useful to conditionally show a "next" button.
+-}
+isLast : Pager -> Bool
+isLast (Pager { currentPage }) =
+    Bounded.value currentPage == Bounded.maxBound currentPage
 
 
 {-| Provide a list and you will get the "slice" of that list according to the pager's state.

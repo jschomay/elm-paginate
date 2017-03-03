@@ -80,6 +80,16 @@ all =
                             )
                                 <= totalItems
             ]
+        , describe "isFirst"
+            [ fuzz int "only true when on first page" <|
+                \i ->
+                    Expect.equal (i <= 1) (isFirst <| goTo i <| init 2 10)
+            ]
+        , describe "isLast"
+            [ fuzz int "only true when on first page" <|
+                \i ->
+                    Expect.equal (i >= 5) (isLast <| goTo i <| init 2 10)
+            ]
         , describe "toList"
             [ test "maps the pager into a list" <|
                 \_ ->
