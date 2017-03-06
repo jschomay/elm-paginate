@@ -1,76 +1,108 @@
 [
   {
     "name": "Paginate",
-    "comment": " Separate the presentation-domain concerns of pagination from the business-domain of your data.\n\n# The Pager type\n@docs Pager\n\n# Constructing and updating\n@docs init,update\n\n# Changing pages\n@docs goTo, next, prev, first, last\n\n# Paginating\n@docs page\n\n# Accessors\n@docs currentPage, itemsPerPage, totalPages\n\n# Rendering\n@docs toList\n",
+    "comment": " Encapsulate your pagination concerns from the rest of your app.\n\n# The PaginatedList type\n@docs PaginatedList\n\n# Constructing and modifying\n@docs fromList, map, changeItemsPerPage\n\n# Changing pages\n@docs goTo, next, prev, first, last\n\n# Accessors\n@docs length, currentPage, itemsPerPage, totalPages, isFirst, isLast, toList, query\n\n# Rendering\n@docs page, pager\n",
     "aliases": [],
     "types": [
       {
-        "name": "Pager",
-        "comment": " The `Pager` type holds all of the information necessary to track your pagination without directly affecting your data.\n",
-        "args": [],
+        "name": "PaginatedList",
+        "comment": " The `PaginatedList` type wraps your `list` and holds all of the information necessary to track pagination.  It does not modify your list in any way (unless you call `Paginate.map`).\n",
+        "args": [
+          "a"
+        ],
         "cases": []
       }
     ],
     "values": [
       {
+        "name": "changeItemsPerPage",
+        "comment": " Change the paging size.  The total number of pages will be updated accordingly, and the current page will remain unchanged if possible.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.  The minimum paging size is 1 item per page.\n",
+        "type": "Int -> Paginate.PaginatedList a -> Paginate.PaginatedList a"
+      },
+      {
         "name": "currentPage",
-        "comment": " Get the current page of the `Pager`\n",
-        "type": "Paginate.Pager -> Int"
+        "comment": " Get the current page of the `PaginatedList`.\n",
+        "type": "Paginate.PaginatedList a -> Int"
       },
       {
         "name": "first",
         "comment": " Go to the first page.\n",
-        "type": "Paginate.Pager -> Paginate.Pager"
+        "type": "Paginate.PaginatedList a -> Paginate.PaginatedList a"
+      },
+      {
+        "name": "fromList",
+        "comment": " Create a new paginated list.  Pass it the desired number of items per page and the list of items to be paginated.  The current page is always initialized to 1.  The minimum number of items per page is 1.  The minimum number of total pages is 1 (even if you pass in an empty list).\n\n      fromList 10 myItems\n          |> currentPage\n      -- equals 1\n\n",
+        "type": "Int -> List a -> Paginate.PaginatedList a"
       },
       {
         "name": "goTo",
-        "comment": " Set the current page directly.  If the specified page is \"out of bounds\" of the pager, it will be set to the first or last page accordingly.\n",
-        "type": "Int -> Paginate.Pager -> Paginate.Pager"
+        "comment": " Set the current page directly.  If the specified page is \"out of bounds\" of the paginated list, it will be set to the first or last page accordingly.\n",
+        "type": "Int -> Paginate.PaginatedList a -> Paginate.PaginatedList a"
       },
       {
-        "name": "init",
-        "comment": " Create a new pager.  Pass it the desired number of items per page and total number of items to be paginated.  The current page is always initialized to 1.  The number of items per page will be set to 1 if you provide 0 or a negative number.\n\n      init 10 (List.length allMyThings)\n          |> currentPage\n      -- (equals 1)\n\n",
-        "type": "Int -> Int -> Paginate.Pager"
+        "name": "isFirst",
+        "comment": " Useful to conditionally show a \"prev\" button.\n",
+        "type": "Paginate.PaginatedList a -> Bool"
+      },
+      {
+        "name": "isLast",
+        "comment": " Useful to conditionally show a \"next\" button.\n",
+        "type": "Paginate.PaginatedList a -> Bool"
       },
       {
         "name": "itemsPerPage",
-        "comment": " Get the number of items per page\n",
-        "type": "Paginate.Pager -> Int"
+        "comment": " Get the number of items per page.\n",
+        "type": "Paginate.PaginatedList a -> Int"
       },
       {
         "name": "last",
         "comment": " Go to the last page.\n",
-        "type": "Paginate.Pager -> Paginate.Pager"
+        "type": "Paginate.PaginatedList a -> Paginate.PaginatedList a"
+      },
+      {
+        "name": "length",
+        "comment": " Get the length of the wrapped list.\n",
+        "type": "Paginate.PaginatedList a -> Int"
+      },
+      {
+        "name": "map",
+        "comment": " Transform the list inside the `PaginatedList` by providing a function to apply to the wrapped list.  This is how you map, filter, sort and update items in the paginated list.  If this function changes the length of the list, the pagination calculations will be updated accordingly.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.\n\n    filtered = Paginate.map (List.filter isFavorited) myPaginatedList\n    -- the paginated list now only contains the items matching your filter\n    -- also the number of pages will update to stay in sync\n\n\n    sorted = Paginate.map List.sort myPaginatedList\n\n\n    filteredAndSorted = Paginate.map (List.filter isFavorited >> List.sort) myPaginatedList\n\n\n    updated = Paginate.map (\\items -> updateById id newData items) myPaginatedList\n\n",
+        "type": "(List a -> List a) -> Paginate.PaginatedList a -> Paginate.PaginatedList a"
       },
       {
         "name": "next",
-        "comment": " Go to the next page.  If you already on the last page, next has no effect.\n",
-        "type": "Paginate.Pager -> Paginate.Pager"
+        "comment": " Go to the next page.  Has no effect if you are already on the last page.\n",
+        "type": "Paginate.PaginatedList a -> Paginate.PaginatedList a"
       },
       {
         "name": "page",
-        "comment": " Provide a list and you will get the \"slice\" of that list according to the pager's state.\n\n    page (goTo 3 <| init 10 100) (List.range 1 100)\n    -- (equals [31, 32, 33, 34, 35, 36, 37, 38, 39 40])\n\n",
-        "type": "Paginate.Pager -> List a -> List a"
+        "comment": " Get the \"slice\" of the wrapped list for the current page.  Usually you would call this and pass the result on to your view function.\n\n    List.range 1 100 |> fromList 10 |> goTo 3 |> page\n    -- equals [ 21, 22, 23, 24, 25, 26, 27, 28, 29 30 ]\n\n\n    view = page myPaginatedList |> renderCurrentPageItems\n\n",
+        "type": "Paginate.PaginatedList a -> List a"
+      },
+      {
+        "name": "pager",
+        "comment": " Build a \"pager\" for your paginated list.  Usually you would use this to render the pager view.  The supplied function is given the current page number being iterated over and whether that page is the current page.\n\n    fromList 2 [ 1, 2, 3, 4, 5, 6 ]\n        |> next\n        |> pager (,)\n    -- equals [ (1, False), (2, True), (3, False) ]\n\n\n    pagerView =\n        div [ class \"mypager\" ] <|\n            pager (\\pageNum isCurrentPage -> renderPagerButton pageNum isCurrentPage) myPaginatedList\n\n",
+        "type": "(Int -> Bool -> b) -> Paginate.PaginatedList a -> List b"
       },
       {
         "name": "prev",
-        "comment": " Go to the previous page.  If you already on the first page, prev has no effect.\n",
-        "type": "Paginate.Pager -> Paginate.Pager"
+        "comment": " Go to the previous page.  Has no effect if you are already on the first page.\n",
+        "type": "Paginate.PaginatedList a -> Paginate.PaginatedList a"
+      },
+      {
+        "name": "query",
+        "comment": " Run an arbitrary function on the wrapped list (losing the pagination context).  Probably most useful for querying the list.  Or if you want to pull certain items out of pagination to making them \"sticky.\"\n\n    hasUnread = query (List.any isUnread) myPaginatedList\n\n\n    numberOfFavorites = query (List.filter isFavorite >> List.length) myPaginatedList\n\n\n    nonPaginatedFavorites = query (List.filter isFavorite) myPaginatedList\n\n",
+        "type": "(List a -> b) -> Paginate.PaginatedList a -> b"
       },
       {
         "name": "toList",
-        "comment": " Turn your pager into a list.  Usually you will do this when you want to render a view for your pager, but it could be a list of anything.  The supplied function is given the current page number being iterated over and whether that page is the current page of the pager or not.\n\n    init 1 3\n        |> next\n        |> toList ((,))\n    -- (equals [(1,False),(2,True),(3,False)])\n\n",
-        "type": "(Int -> Bool -> a) -> Paginate.Pager -> List a"
+        "comment": " Pull out the wrapped list (losing the pagination context).  Consider using `query` instead.\n",
+        "type": "Paginate.PaginatedList a -> List a"
       },
       {
         "name": "totalPages",
-        "comment": " Get the total number of pages\n",
-        "type": "Paginate.Pager -> Int"
-      },
-      {
-        "name": "update",
-        "comment": " Update a pager by passing in the new items per page and new total number of items to be paginated.  You would want to do this any time the number of items in the data you are paginating changes or if you want a different page size.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.\n",
-        "type": "Int -> Int -> Paginate.Pager -> Paginate.Pager"
+        "comment": " Get the total number of pages.\n",
+        "type": "Paginate.PaginatedList a -> Int"
       }
     ],
     "generated-with-elm-version": "0.18.0"

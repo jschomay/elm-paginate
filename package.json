@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Simple and robust pagination in elm",
   "main": "index.js",
-  "dependencies": {
-    "lobo": "0.0.8"
+  "dependencies": {},
+  "devDependencies": {
+    "lobo": "^0.1.0"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "lobo --watch"
   },

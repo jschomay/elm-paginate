@@ -7,8 +7,7 @@ import Html.Events exposing (..)
 
 
 type alias Model =
-    { things : List String
-    , pager : Pager
+    { things : PaginatedList String
     , reversed : Bool
     , query : String
     }
@@ -22,7 +21,7 @@ type Msg
     | GoTo Int
     | ChangePageSize String
     | DeleteItem String
-    | AddItems
+    | AddItem
     | Reverse
     | Find String
 
@@ -38,8 +37,7 @@ main =
 
 init : Model
 init =
-    { things = List.range 1 37 |> List.map (toString >> (++) "item ")
-    , pager = Paginate.init 10 37
+    { things = Paginate.fromList 10 <| List.map (toString >> (++) "item ") <| List.range 1 37
     , reversed = False
     , query = ""
     }
@@ -49,56 +47,40 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         GoTo index ->
-            { model | pager = Paginate.goTo index model.pager }
+            { model | things = Paginate.goTo index model.things }
 
         Next ->
-            { model | pager = Paginate.next model.pager }
+            { model | things = Paginate.next model.things }
 
         Prev ->
-            { model | pager = Paginate.prev model.pager }
+            { model | things = Paginate.prev model.things }
 
         First ->
-            { model | pager = Paginate.first model.pager }
+            { model | things = Paginate.first model.things }
 
         Last ->
-            { model | pager = Paginate.last model.pager }
+            { model | things = Paginate.last model.things }
 
         ChangePageSize size ->
-            { model
-                | pager =
-                    Paginate.update
-                        (Result.withDefault 10 <| String.toInt size)
-                        (List.length model.things)
-                        model.pager
-            }
+            let
+                sizeAsInt =
+                    Result.withDefault 10 <| String.toInt size
+            in
+                { model | things = Paginate.changeItemsPerPage sizeAsInt model.things }
 
         DeleteItem item ->
             let
-                newThings =
-                    List.filter ((/=) item) model.things
+                removeItem =
+                    List.filter ((/=) item)
             in
-                { model
-                    | things = newThings
-                    , pager =
-                        Paginate.update
-                            (Paginate.itemsPerPage model.pager)
-                            (List.length newThings)
-                            model.pager
-                }
+                { model | things = Paginate.map removeItem model.things }
 
-        AddItems ->
+        AddItem ->
             let
-                newThings =
-                    model.things ++ (List.repeat 1 "new item")
+                addItem existing =
+                    existing ++ (List.repeat 1 "new item")
             in
-                { model
-                    | things = newThings
-                    , pager =
-                        Paginate.update
-                            (Paginate.itemsPerPage model.pager)
-                            (List.length newThings)
-                            model.pager
-                }
+                { model | things = Paginate.map addItem model.things }
 
         Reverse ->
             { model | reversed = not model.reversed }
@@ -107,18 +89,9 @@ update msg model =
             { model | query = query }
 
 
-filterAndSortThings : Model -> Model
+filterAndSortThings : Model -> PaginatedList String
 filterAndSortThings model =
     let
-        filteredAndSortedThings =
-            (model.things |> filter |> sort)
-
-        filteredAndSortedPager =
-            Paginate.update
-                (Paginate.itemsPerPage model.pager)
-                (List.length filteredAndSortedThings)
-                model.pager
-
         sort =
             if model.reversed then
                 List.reverse
@@ -131,21 +104,42 @@ filterAndSortThings model =
             else
                 List.filter (\thing -> String.contains model.query (toString thing))
     in
-        { model | things = filteredAndSortedThings, pager = filteredAndSortedPager }
+        Paginate.map (filter >> sort) model.things
 
 
-view : Model -> Html Msg
-view filteredSortedModel =
+view : PaginatedList String -> Html Msg
+view filteredSortedThings =
     let
-        displayingView =
+        displayInfoView =
             div []
-                [ text <|
+                [ div []
+                    [ text <|
+                        String.join " " <|
+                            [ "showing"
+                            , (toString <| List.length <| Paginate.page filteredSortedThings)
+                            , "of"
+                            , (toString <| Paginate.length filteredSortedThings)
+                            , "items"
+                            ]
+                    , u [ onClick <| AddItem, style [ ( "cursor", "pointer" ) ] ] [ text " (add more!)" ]
+                    ]
+                , text <|
                     String.join " "
-                        [ "Showing page"
-                        , toString <| Paginate.currentPage filteredSortedModel.pager
+                        [ "page"
+                        , toString <| Paginate.currentPage filteredSortedThings
                         , "of"
-                        , toString <| Paginate.totalPages filteredSortedModel.pager
+                        , toString <| Paginate.totalPages filteredSortedThings
                         ]
+                , div []
+                    [ text <|
+                        String.join " "
+                            [ "including"
+                            , Paginate.query
+                                (List.filter (String.contains "new item") >> List.length >> toString)
+                                filteredSortedThings
+                            , "new items"
+                            ]
+                    ]
                 ]
 
         itemView item =
@@ -154,9 +148,9 @@ view filteredSortedModel =
                 , u [ onClick <| DeleteItem item, style [ ( "cursor", "pointer" ) ] ] [ text " (delete)" ]
                 ]
 
-        itemsPerPageView =
+        itemsPerPageSelector =
             div []
-                [ text "Show"
+                [ text "show"
                 , select [ onInput ChangePageSize ]
                     [ option [ value "10" ] [ text "10" ]
                     , option [ value "20" ] [ text "20" ]
@@ -166,16 +160,16 @@ view filteredSortedModel =
                 ]
 
         prevButtons =
-            [ button [ onClick First, disabled <| Paginate.isFirst filteredSortedModel.pager ] [ text "<<" ]
-            , button [ onClick Prev, disabled <| Paginate.isFirst filteredSortedModel.pager ] [ text "<" ]
+            [ button [ onClick First, disabled <| Paginate.isFirst filteredSortedThings ] [ text "<<" ]
+            , button [ onClick Prev, disabled <| Paginate.isFirst filteredSortedThings ] [ text "<" ]
             ]
 
         nextButtons =
-            [ button [ onClick Next, disabled <| Paginate.isLast filteredSortedModel.pager ] [ text ">" ]
-            , button [ onClick Last, disabled <| Paginate.isLast filteredSortedModel.pager ] [ text ">>" ]
+            [ button [ onClick Next, disabled <| Paginate.isLast filteredSortedThings ] [ text ">" ]
+            , button [ onClick Last, disabled <| Paginate.isLast filteredSortedThings ] [ text ">>" ]
             ]
 
-        pagerView index isActive =
+        pagerButtonView index isActive =
             button
                 [ style
                     [ ( "font-weight"
@@ -190,16 +184,12 @@ view filteredSortedModel =
                 [ text <| toString index ]
     in
         div [] <|
-            [ div []
-                [ text <| (toString <| List.length filteredSortedModel.things) ++ " total items"
-                , u [ onClick <| AddItems, style [ ( "cursor", "pointer" ) ] ] [ text " (add more!)" ]
-                ]
-            , displayingView
-            , itemsPerPageView
+            [ displayInfoView
+            , itemsPerPageSelector
             , button [ onClick Reverse ] [ text "Reverse list" ]
             , input [ placeholder "Search...", onInput Find ] []
-            , ul [] (List.map itemView <| Paginate.page filteredSortedModel.pager filteredSortedModel.things)
+            , ul [] (List.map itemView <| Paginate.page filteredSortedThings)
             ]
                 ++ prevButtons
-                ++ [ span [] <| Paginate.toList pagerView filteredSortedModel.pager ]
+                ++ [ span [] <| Paginate.pager pagerButtonView filteredSortedThings ]
                 ++ nextButtons

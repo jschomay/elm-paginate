@@ -1,173 +1,236 @@
 module Paginate
     exposing
-        ( Pager
-        , init
-        , update
+        ( PaginatedList
+        , fromList
+        , map
+        , changeItemsPerPage
         , goTo
         , next
         , prev
         , first
         , last
-        , page
+        , length
         , currentPage
         , itemsPerPage
         , totalPages
         , isFirst
         , isLast
         , toList
+        , query
+        , page
+        , pager
         )
 
-{-| Separate the presentation-domain concerns of pagination from the business-domain of your data.
+{-| Encapsulate your pagination concerns from the rest of your app.
 
-# The Pager type
-@docs Pager
+# The PaginatedList type
+@docs PaginatedList
 
-# Constructing and updating
-@docs init,update
+# Constructing and modifying
+@docs fromList, map, changeItemsPerPage
 
 # Changing pages
 @docs goTo, next, prev, first, last
 
-# Paginating
-@docs page
-
 # Accessors
-@docs currentPage, itemsPerPage, totalPages, isFirst, isLast
+@docs length, currentPage, itemsPerPage, totalPages, isFirst, isLast, toList, query
 
 # Rendering
-@docs toList
+@docs page, pager
 -}
 
 import Number.Bounded as Bounded exposing (Bounded)
 
 
-{-| The `Pager` type holds all of the information necessary to track your pagination without directly affecting your data.
+{-| The `PaginatedList` type wraps your `list` and holds all of the information necessary to track pagination.  It does not modify your list in any way (unless you call `Paginate.map`).
 -}
-type Pager
-    = Pager { itemsPerPage : Int, currentPage : Bounded Int }
+type PaginatedList a
+    = PaginatedList { itemsPerPage : Int, currentPage : Bounded Int, items : List a }
 
 
-{-| Create a new pager.  Pass it the desired number of items per page and total number of items to be paginated.  The current page is always initialized to 1.  The number of items per page will be set to 1 if you provide 0 or a negative number.
+{-| Create a new paginated list.  Pass it the desired number of items per page and the list of items to be paginated.  The current page is always initialized to 1.  The minimum number of items per page is 1.  The minimum number of total pages is 1 (even if you pass in an empty list).
 
-      init 10 (List.length allMyThings)
+      fromList 10 myItems
           |> currentPage
-      -- (equals 1)
+      -- equals 1
 
 -}
-init : Int -> Int -> Pager
-init itemsPerPage totalItems =
+fromList : Int -> List a -> PaginatedList a
+fromList itemsPerPage items =
     let
         max =
-            if totalItems <= 0 then
+            if List.isEmpty items then
                 1
             else
-                ceiling <| toFloat totalItems / toFloat (Basics.max 1 itemsPerPage)
+                ceiling <| toFloat (List.length items) / toFloat (Basics.max 1 itemsPerPage)
     in
-        Pager { itemsPerPage = Basics.max 1 itemsPerPage, currentPage = Bounded.between 1 max }
+        PaginatedList
+            { itemsPerPage = Basics.max 1 itemsPerPage
+            , currentPage = Bounded.between 1 max
+            , items = items
+            }
 
 
-{-| Update a pager by passing in the new items per page and new total number of items to be paginated.  You would want to do this any time the number of items in the data you are paginating changes or if you want a different page size.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.
+{-| Transform the list inside the `PaginatedList` by providing a function to apply to the wrapped list.  This is how you map, filter, sort and update items in the paginated list.  If this function changes the length of the list, the pagination calculations will be updated accordingly.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.
+
+    filtered = Paginate.map (List.filter isFavorited) myPaginatedList
+    -- the paginated list now only contains the items matching your filter
+    -- also the number of pages will update to stay in sync
+
+
+    sorted = Paginate.map List.sort myPaginatedList
+
+
+    filteredAndSorted = Paginate.map (List.filter isFavorited >> List.sort) myPaginatedList
+
+
+    updated = Paginate.map (\items -> updateById id newData items) myPaginatedList
+
 -}
-update : Int -> Int -> Pager -> Pager
-update newItemsPerPage newTotalItems (Pager { currentPage }) =
-    init newItemsPerPage newTotalItems
+map : (List a -> List a) -> PaginatedList a -> PaginatedList a
+map f (PaginatedList { currentPage, itemsPerPage, items }) =
+    fromList itemsPerPage (f items)
         |> goTo (Bounded.value currentPage)
 
 
-{-| Set the current page directly.  If the specified page is "out of bounds" of the pager, it will be set to the first or last page accordingly.
+{-| Change the paging size.  The total number of pages will be updated accordingly, and the current page will remain unchanged if possible.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.  The minimum paging size is 1 item per page.
 -}
-goTo : Int -> Pager -> Pager
-goTo i (Pager { itemsPerPage, currentPage }) =
-    Bounded.set i (currentPage)
-        |> \newCurrentPage ->
-            Pager { itemsPerPage = itemsPerPage, currentPage = newCurrentPage }
+changeItemsPerPage : Int -> PaginatedList a -> PaginatedList a
+changeItemsPerPage newItemsPerPage (PaginatedList { currentPage, items }) =
+    fromList newItemsPerPage items
+        |> goTo (Bounded.value currentPage)
 
 
-{-| Go to the next page.  If you already on the last page, next has no effect.
+{-| Set the current page directly.  If the specified page is "out of bounds" of the paginated list, it will be set to the first or last page accordingly.
 -}
-next : Pager -> Pager
-next ((Pager { currentPage }) as pager) =
-    goTo (Bounded.value currentPage + 1) pager
+goTo : Int -> PaginatedList a -> PaginatedList a
+goTo i (PaginatedList p) =
+    PaginatedList { p | currentPage = Bounded.set i p.currentPage }
 
 
-{-| Go to the previous page.  If you already on the first page, prev has no effect.
+{-| Go to the next page.  Has no effect if you are already on the last page.
 -}
-prev : Pager -> Pager
-prev ((Pager { currentPage }) as pager) =
-    goTo (Bounded.value currentPage - 1) pager
+next : PaginatedList a -> PaginatedList a
+next (PaginatedList p) =
+    PaginatedList { p | currentPage = Bounded.inc 1 p.currentPage }
+
+
+{-| Go to the previous page.  Has no effect if you are already on the first page.
+-}
+prev : PaginatedList a -> PaginatedList a
+prev (PaginatedList p) =
+    PaginatedList { p | currentPage = Bounded.dec 1 p.currentPage }
 
 
 {-| Go to the first page.
 -}
-first : Pager -> Pager
-first pager =
-    goTo 1 pager
+first : PaginatedList a -> PaginatedList a
+first paginatedList =
+    goTo 1 paginatedList
 
 
 {-| Go to the last page.
 -}
-last : Pager -> Pager
-last pager =
-    goTo (totalPages pager) pager
+last : PaginatedList a -> PaginatedList a
+last paginatedList =
+    goTo (totalPages paginatedList) paginatedList
 
 
 {-| Useful to conditionally show a "prev" button.
 -}
-isFirst : Pager -> Bool
-isFirst (Pager { currentPage }) =
+isFirst : PaginatedList a -> Bool
+isFirst (PaginatedList { currentPage }) =
     Bounded.value currentPage == 1
 
 
 {-| Useful to conditionally show a "next" button.
 -}
-isLast : Pager -> Bool
-isLast (Pager { currentPage }) =
+isLast : PaginatedList a -> Bool
+isLast (PaginatedList { currentPage }) =
     Bounded.value currentPage == Bounded.maxBound currentPage
 
 
-{-| Provide a list and you will get the "slice" of that list according to the pager's state.
+{-| Get the length of the wrapped list.
+-}
+length : PaginatedList a -> Int
+length (PaginatedList { items }) =
+    List.length items
 
-    page (goTo 3 <| init 10 100) (List.range 1 100)
-    -- (equals [21, 22, 23, 24, 25, 26, 27, 28, 29 30])
+
+{-| Get the current page of the `PaginatedList`.
+-}
+currentPage : PaginatedList a -> Int
+currentPage (PaginatedList { currentPage }) =
+    Bounded.value currentPage
+
+
+{-| Get the number of items per page.
+-}
+itemsPerPage : PaginatedList a -> Int
+itemsPerPage (PaginatedList { itemsPerPage }) =
+    itemsPerPage
+
+
+{-| Get the total number of pages.
+-}
+totalPages : PaginatedList a -> Int
+totalPages (PaginatedList { currentPage }) =
+    Bounded.maxBound currentPage
+
+
+{-| Pull out the wrapped list (losing the pagination context).  Consider using `query` instead.
+-}
+toList : PaginatedList a -> List a
+toList (PaginatedList { items }) =
+    items
+
+
+{-| Run an arbitrary function on the wrapped list (losing the pagination context).  Probably most useful for querying the list.  Or if you want to pull certain items out of pagination to making them "sticky."
+
+    hasUnread = query (List.any isUnread) myPaginatedList
+
+
+    numberOfFavorites = query (List.filter isFavorite >> List.length) myPaginatedList
+
+
+    nonPaginatedFavorites = query (List.filter isFavorite) myPaginatedList
 
 -}
-page : Pager -> List a -> List a
-page (Pager { itemsPerPage, currentPage }) list =
-    list
+query : (List a -> b) -> PaginatedList a -> b
+query f (PaginatedList { items }) =
+    f items
+
+
+{-| Get the "slice" of the wrapped list for the current page.  Usually you would call this and pass the result on to your view function.
+
+    List.range 1 100 |> fromList 10 |> goTo 3 |> page
+    -- equals [ 21, 22, 23, 24, 25, 26, 27, 28, 29 30 ]
+
+
+    view = page myPaginatedList |> renderCurrentPageItems
+
+-}
+page : PaginatedList a -> List a
+page (PaginatedList { itemsPerPage, currentPage, items }) =
+    items
         |> List.drop ((Bounded.value currentPage - 1) * itemsPerPage)
         |> List.take (itemsPerPage)
 
 
-{-| Get the current page of the `Pager`
--}
-currentPage : Pager -> Int
-currentPage (Pager { currentPage }) =
-    Bounded.value currentPage
+{-| Build a "pager" for your paginated list.  Usually you would use this to render the pager view.  The supplied function is given the current page number being iterated over and whether that page is the current page.
 
-
-{-| Get the number of items per page
--}
-itemsPerPage : Pager -> Int
-itemsPerPage (Pager { itemsPerPage }) =
-    itemsPerPage
-
-
-{-| Get the total number of pages
--}
-totalPages : Pager -> Int
-totalPages (Pager { currentPage }) =
-    Bounded.maxBound currentPage
-
-
-{-| Turn your pager into a list.  Usually you will do this when you want to render a view for your pager, but it could be a list of anything.  The supplied function is given the current page number being iterated over and whether that page is the current page of the pager or not.
-
-    init 1 3
+    fromList 2 [ 1, 2, 3, 4, 5, 6 ]
         |> next
-        |> toList ((,))
-    -- (equals [(1,False),(2,True),(3,False)])
+        |> pager (,)
+    -- equals [ (1, False), (2, True), (3, False) ]
+
+
+    pagerView =
+        div [ class "mypager" ] <|
+            pager (\pageNum isCurrentPage -> renderPagerButton pageNum isCurrentPage) myPaginatedList
 
 -}
-toList : (Int -> Bool -> a) -> Pager -> List a
-toList f (Pager { currentPage }) =
+pager : (Int -> Bool -> b) -> PaginatedList a -> List b
+pager f (PaginatedList { currentPage }) =
     List.range 1 (Bounded.maxBound currentPage)
         |> List.map (\i -> f i (i == (Bounded.value currentPage)))
