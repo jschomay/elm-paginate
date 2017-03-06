@@ -8289,7 +8289,7 @@ var _jschomay$elm_bounded_number$Number_Bounded$dec = F2(
 				value: A2(_elm_lang$core$Basics$max, _p15, _p14._0.value - by)
 			});
 	});
-var _jschomay$elm_paginate$Paginate$toList = F2(
+var _jschomay$elm_paginate$Paginate$pager = F2(
 	function (f, _p0) {
 		var _p1 = _p0;
 		var _p2 = _p1._0.currentPage;
@@ -8308,96 +8308,129 @@ var _jschomay$elm_paginate$Paginate$toList = F2(
 				1,
 				_jschomay$elm_bounded_number$Number_Bounded$maxBound(_p2)));
 	});
-var _jschomay$elm_paginate$Paginate$totalPages = function (_p3) {
+var _jschomay$elm_paginate$Paginate$page = function (_p3) {
 	var _p4 = _p3;
-	return _jschomay$elm_bounded_number$Number_Bounded$maxBound(_p4._0.currentPage);
+	var _p5 = _p4._0.itemsPerPage;
+	return A2(
+		_elm_lang$core$List$take,
+		_p5,
+		A2(
+			_elm_lang$core$List$drop,
+			(_jschomay$elm_bounded_number$Number_Bounded$value(_p4._0.currentPage) - 1) * _p5,
+			_p4._0.items));
 };
-var _jschomay$elm_paginate$Paginate$itemsPerPage = function (_p5) {
-	var _p6 = _p5;
-	return _p6._0.itemsPerPage;
-};
-var _jschomay$elm_paginate$Paginate$currentPage = function (_p7) {
-	var _p8 = _p7;
-	return _jschomay$elm_bounded_number$Number_Bounded$value(_p8._0.currentPage);
-};
-var _jschomay$elm_paginate$Paginate$page = F2(
-	function (_p9, list) {
-		var _p10 = _p9;
-		var _p11 = _p10._0.itemsPerPage;
-		return A2(
-			_elm_lang$core$List$take,
-			_p11,
-			A2(
-				_elm_lang$core$List$drop,
-				(_jschomay$elm_bounded_number$Number_Bounded$value(_p10._0.currentPage) - 1) * _p11,
-				list));
+var _jschomay$elm_paginate$Paginate$query = F2(
+	function (f, _p6) {
+		var _p7 = _p6;
+		return f(_p7._0.items);
 	});
-var _jschomay$elm_paginate$Paginate$isLast = function (_p12) {
-	var _p13 = _p12;
-	var _p14 = _p13._0.currentPage;
-	return _elm_lang$core$Native_Utils.eq(
-		_jschomay$elm_bounded_number$Number_Bounded$value(_p14),
-		_jschomay$elm_bounded_number$Number_Bounded$maxBound(_p14));
+var _jschomay$elm_paginate$Paginate$toList = function (_p8) {
+	var _p9 = _p8;
+	return _p9._0.items;
 };
-var _jschomay$elm_paginate$Paginate$isFirst = function (_p15) {
-	var _p16 = _p15;
+var _jschomay$elm_paginate$Paginate$totalPages = function (_p10) {
+	var _p11 = _p10;
+	return _jschomay$elm_bounded_number$Number_Bounded$maxBound(_p11._0.currentPage);
+};
+var _jschomay$elm_paginate$Paginate$itemsPerPage = function (_p12) {
+	var _p13 = _p12;
+	return _p13._0.itemsPerPage;
+};
+var _jschomay$elm_paginate$Paginate$currentPage = function (_p14) {
+	var _p15 = _p14;
+	return _jschomay$elm_bounded_number$Number_Bounded$value(_p15._0.currentPage);
+};
+var _jschomay$elm_paginate$Paginate$length = function (_p16) {
+	var _p17 = _p16;
+	return _elm_lang$core$List$length(_p17._0.items);
+};
+var _jschomay$elm_paginate$Paginate$isLast = function (_p18) {
+	var _p19 = _p18;
+	var _p20 = _p19._0.currentPage;
 	return _elm_lang$core$Native_Utils.eq(
-		_jschomay$elm_bounded_number$Number_Bounded$value(_p16._0.currentPage),
+		_jschomay$elm_bounded_number$Number_Bounded$value(_p20),
+		_jschomay$elm_bounded_number$Number_Bounded$maxBound(_p20));
+};
+var _jschomay$elm_paginate$Paginate$isFirst = function (_p21) {
+	var _p22 = _p21;
+	return _elm_lang$core$Native_Utils.eq(
+		_jschomay$elm_bounded_number$Number_Bounded$value(_p22._0.currentPage),
 		1);
 };
-var _jschomay$elm_paginate$Paginate$Pager = function (a) {
-	return {ctor: 'Pager', _0: a};
+var _jschomay$elm_paginate$Paginate$PaginatedList = function (a) {
+	return {ctor: 'PaginatedList', _0: a};
 };
-var _jschomay$elm_paginate$Paginate$init = F2(
-	function (itemsPerPage, totalItems) {
-		var max = (_elm_lang$core$Native_Utils.cmp(totalItems, 0) < 1) ? 1 : _elm_lang$core$Basics$ceiling(
-			_elm_lang$core$Basics$toFloat(totalItems) / _elm_lang$core$Basics$toFloat(
+var _jschomay$elm_paginate$Paginate$fromList = F2(
+	function (itemsPerPage, items) {
+		var max = _elm_lang$core$List$isEmpty(items) ? 1 : _elm_lang$core$Basics$ceiling(
+			_elm_lang$core$Basics$toFloat(
+				_elm_lang$core$List$length(items)) / _elm_lang$core$Basics$toFloat(
 				A2(_elm_lang$core$Basics$max, 1, itemsPerPage)));
-		return _jschomay$elm_paginate$Paginate$Pager(
+		return _jschomay$elm_paginate$Paginate$PaginatedList(
 			{
 				itemsPerPage: A2(_elm_lang$core$Basics$max, 1, itemsPerPage),
-				currentPage: A2(_jschomay$elm_bounded_number$Number_Bounded$between, 1, max)
+				currentPage: A2(_jschomay$elm_bounded_number$Number_Bounded$between, 1, max),
+				items: items
 			});
 	});
 var _jschomay$elm_paginate$Paginate$goTo = F2(
-	function (i, _p17) {
-		var _p18 = _p17;
-		return function (newCurrentPage) {
-			return _jschomay$elm_paginate$Paginate$Pager(
-				{itemsPerPage: _p18._0.itemsPerPage, currentPage: newCurrentPage});
-		}(
-			A2(_jschomay$elm_bounded_number$Number_Bounded$set, i, _p18._0.currentPage));
+	function (i, _p23) {
+		var _p24 = _p23;
+		var _p25 = _p24._0;
+		return _jschomay$elm_paginate$Paginate$PaginatedList(
+			_elm_lang$core$Native_Utils.update(
+				_p25,
+				{
+					currentPage: A2(_jschomay$elm_bounded_number$Number_Bounded$set, i, _p25.currentPage)
+				}));
 	});
-var _jschomay$elm_paginate$Paginate$update = F3(
-	function (newItemsPerPage, newTotalItems, _p19) {
-		var _p20 = _p19;
+var _jschomay$elm_paginate$Paginate$map = F2(
+	function (f, _p26) {
+		var _p27 = _p26;
 		return A2(
 			_jschomay$elm_paginate$Paginate$goTo,
-			_jschomay$elm_bounded_number$Number_Bounded$value(_p20._0.currentPage),
-			A2(_jschomay$elm_paginate$Paginate$init, newItemsPerPage, newTotalItems));
+			_jschomay$elm_bounded_number$Number_Bounded$value(_p27._0.currentPage),
+			A2(
+				_jschomay$elm_paginate$Paginate$fromList,
+				_p27._0.itemsPerPage,
+				f(_p27._0.items)));
 	});
-var _jschomay$elm_paginate$Paginate$next = function (_p21) {
-	var _p22 = _p21;
+var _jschomay$elm_paginate$Paginate$changeItemsPerPage = F2(
+	function (newItemsPerPage, _p28) {
+		var _p29 = _p28;
+		return A2(
+			_jschomay$elm_paginate$Paginate$goTo,
+			_jschomay$elm_bounded_number$Number_Bounded$value(_p29._0.currentPage),
+			A2(_jschomay$elm_paginate$Paginate$fromList, newItemsPerPage, _p29._0.items));
+	});
+var _jschomay$elm_paginate$Paginate$first = function (paginatedList) {
+	return A2(_jschomay$elm_paginate$Paginate$goTo, 1, paginatedList);
+};
+var _jschomay$elm_paginate$Paginate$last = function (paginatedList) {
 	return A2(
 		_jschomay$elm_paginate$Paginate$goTo,
-		_jschomay$elm_bounded_number$Number_Bounded$value(_p22._0.currentPage) + 1,
-		_p22);
+		_jschomay$elm_paginate$Paginate$totalPages(paginatedList),
+		paginatedList);
 };
-var _jschomay$elm_paginate$Paginate$prev = function (_p23) {
-	var _p24 = _p23;
-	return A2(
-		_jschomay$elm_paginate$Paginate$goTo,
-		_jschomay$elm_bounded_number$Number_Bounded$value(_p24._0.currentPage) - 1,
-		_p24);
+var _jschomay$elm_paginate$Paginate$next = function (_p30) {
+	var _p31 = _p30;
+	var _p32 = _p31._0;
+	return _jschomay$elm_paginate$Paginate$PaginatedList(
+		_elm_lang$core$Native_Utils.update(
+			_p32,
+			{
+				currentPage: A2(_jschomay$elm_bounded_number$Number_Bounded$inc, 1, _p32.currentPage)
+			}));
 };
-var _jschomay$elm_paginate$Paginate$first = function (pager) {
-	return A2(_jschomay$elm_paginate$Paginate$goTo, 1, pager);
-};
-var _jschomay$elm_paginate$Paginate$last = function (pager) {
-	return A2(
-		_jschomay$elm_paginate$Paginate$goTo,
-		_jschomay$elm_paginate$Paginate$totalPages(pager),
-		pager);
+var _jschomay$elm_paginate$Paginate$prev = function (_p33) {
+	var _p34 = _p33;
+	var _p35 = _p34._0;
+	return _jschomay$elm_paginate$Paginate$PaginatedList(
+		_elm_lang$core$Native_Utils.update(
+			_p35,
+			{
+				currentPage: A2(_jschomay$elm_bounded_number$Number_Bounded$dec, 1, _p35.currentPage)
+			}));
 };
 var _jschomay$elm_paginate$Example$filterAndSortThings = function (model) {
 	var filter = _elm_lang$core$Native_Utils.eq(model.query, '') ? _elm_lang$core$Basics$identity : _elm_lang$core$List$filter(
@@ -8408,96 +8441,80 @@ var _jschomay$elm_paginate$Example$filterAndSortThings = function (model) {
 				_elm_lang$core$Basics$toString(thing));
 		});
 	var sort = model.reversed ? _elm_lang$core$List$reverse : _elm_lang$core$Basics$identity;
-	var filteredAndSortedThings = sort(
-		filter(model.things));
-	var filteredAndSortedPager = A3(
-		_jschomay$elm_paginate$Paginate$update,
-		_jschomay$elm_paginate$Paginate$itemsPerPage(model.pager),
-		_elm_lang$core$List$length(filteredAndSortedThings),
-		model.pager);
-	return _elm_lang$core$Native_Utils.update(
-		model,
-		{things: filteredAndSortedThings, pager: filteredAndSortedPager});
+	return A2(
+		_jschomay$elm_paginate$Paginate$map,
+		function (_p0) {
+			return sort(
+				filter(_p0));
+		},
+		model.things);
 };
 var _jschomay$elm_paginate$Example$update = F2(
 	function (msg, model) {
-		var _p0 = msg;
-		switch (_p0.ctor) {
+		var _p1 = msg;
+		switch (_p1.ctor) {
 			case 'GoTo':
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						pager: A2(_jschomay$elm_paginate$Paginate$goTo, _p0._0, model.pager)
+						things: A2(_jschomay$elm_paginate$Paginate$goTo, _p1._0, model.things)
 					});
 			case 'Next':
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						pager: _jschomay$elm_paginate$Paginate$next(model.pager)
+						things: _jschomay$elm_paginate$Paginate$next(model.things)
 					});
 			case 'Prev':
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						pager: _jschomay$elm_paginate$Paginate$prev(model.pager)
+						things: _jschomay$elm_paginate$Paginate$prev(model.things)
 					});
 			case 'First':
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						pager: _jschomay$elm_paginate$Paginate$first(model.pager)
+						things: _jschomay$elm_paginate$Paginate$first(model.things)
 					});
 			case 'Last':
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						pager: _jschomay$elm_paginate$Paginate$last(model.pager)
+						things: _jschomay$elm_paginate$Paginate$last(model.things)
 					});
 			case 'ChangePageSize':
+				var sizeAsInt = A2(
+					_elm_lang$core$Result$withDefault,
+					10,
+					_elm_lang$core$String$toInt(_p1._0));
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						pager: A3(
-							_jschomay$elm_paginate$Paginate$update,
-							A2(
-								_elm_lang$core$Result$withDefault,
-								10,
-								_elm_lang$core$String$toInt(_p0._0)),
-							_elm_lang$core$List$length(model.things),
-							model.pager)
+						things: A2(_jschomay$elm_paginate$Paginate$changeItemsPerPage, sizeAsInt, model.things)
 					});
 			case 'DeleteItem':
-				var newThings = A2(
-					_elm_lang$core$List$filter,
+				var removeItem = _elm_lang$core$List$filter(
 					F2(
 						function (x, y) {
 							return !_elm_lang$core$Native_Utils.eq(x, y);
-						})(_p0._0),
-					model.things);
+						})(_p1._0));
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						things: newThings,
-						pager: A3(
-							_jschomay$elm_paginate$Paginate$update,
-							_jschomay$elm_paginate$Paginate$itemsPerPage(model.pager),
-							_elm_lang$core$List$length(newThings),
-							model.pager)
+						things: A2(_jschomay$elm_paginate$Paginate$map, removeItem, model.things)
 					});
-			case 'AddItems':
-				var newThings = A2(
-					_elm_lang$core$Basics_ops['++'],
-					model.things,
-					A2(_elm_lang$core$List$repeat, 1, 'new item'));
+			case 'AddItem':
+				var addItem = function (existing) {
+					return A2(
+						_elm_lang$core$Basics_ops['++'],
+						existing,
+						A2(_elm_lang$core$List$repeat, 1, 'new item'));
+				};
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						things: newThings,
-						pager: A3(
-							_jschomay$elm_paginate$Paginate$update,
-							_jschomay$elm_paginate$Paginate$itemsPerPage(model.pager),
-							_elm_lang$core$List$length(newThings),
-							model.pager)
+						things: A2(_jschomay$elm_paginate$Paginate$map, addItem, model.things)
 					});
 			case 'Reverse':
 				return _elm_lang$core$Native_Utils.update(
@@ -8506,35 +8523,37 @@ var _jschomay$elm_paginate$Example$update = F2(
 			default:
 				return _elm_lang$core$Native_Utils.update(
 					model,
-					{query: _p0._0});
+					{query: _p1._0});
 		}
 	});
 var _jschomay$elm_paginate$Example$init = {
 	things: A2(
-		_elm_lang$core$List$map,
-		function (_p1) {
-			return A2(
-				F2(
-					function (x, y) {
-						return A2(_elm_lang$core$Basics_ops['++'], x, y);
-					}),
-				'item ',
-				_elm_lang$core$Basics$toString(_p1));
-		},
-		A2(_elm_lang$core$List$range, 1, 37)),
-	pager: A2(_jschomay$elm_paginate$Paginate$init, 10, 37),
+		_jschomay$elm_paginate$Paginate$fromList,
+		10,
+		A2(
+			_elm_lang$core$List$map,
+			function (_p2) {
+				return A2(
+					F2(
+						function (x, y) {
+							return A2(_elm_lang$core$Basics_ops['++'], x, y);
+						}),
+					'item ',
+					_elm_lang$core$Basics$toString(_p2));
+			},
+			A2(_elm_lang$core$List$range, 1, 37))),
 	reversed: false,
 	query: ''
 };
-var _jschomay$elm_paginate$Example$Model = F4(
-	function (a, b, c, d) {
-		return {things: a, pager: b, reversed: c, query: d};
+var _jschomay$elm_paginate$Example$Model = F3(
+	function (a, b, c) {
+		return {things: a, reversed: b, query: c};
 	});
 var _jschomay$elm_paginate$Example$Find = function (a) {
 	return {ctor: 'Find', _0: a};
 };
 var _jschomay$elm_paginate$Example$Reverse = {ctor: 'Reverse'};
-var _jschomay$elm_paginate$Example$AddItems = {ctor: 'AddItems'};
+var _jschomay$elm_paginate$Example$AddItem = {ctor: 'AddItem'};
 var _jschomay$elm_paginate$Example$DeleteItem = function (a) {
 	return {ctor: 'DeleteItem', _0: a};
 };
@@ -8548,8 +8567,8 @@ var _jschomay$elm_paginate$Example$Last = {ctor: 'Last'};
 var _jschomay$elm_paginate$Example$First = {ctor: 'First'};
 var _jschomay$elm_paginate$Example$Prev = {ctor: 'Prev'};
 var _jschomay$elm_paginate$Example$Next = {ctor: 'Next'};
-var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
-	var pagerView = F2(
+var _jschomay$elm_paginate$Example$view = function (filteredSortedThings) {
+	var pagerButtonView = F2(
 		function (index, isActive) {
 			return A2(
 				_elm_lang$html$Html$button,
@@ -8589,7 +8608,7 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 				_1: {
 					ctor: '::',
 					_0: _elm_lang$html$Html_Attributes$disabled(
-						_jschomay$elm_paginate$Paginate$isLast(filteredSortedModel.pager)),
+						_jschomay$elm_paginate$Paginate$isLast(filteredSortedThings)),
 					_1: {ctor: '[]'}
 				}
 			},
@@ -8608,7 +8627,7 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 					_1: {
 						ctor: '::',
 						_0: _elm_lang$html$Html_Attributes$disabled(
-							_jschomay$elm_paginate$Paginate$isLast(filteredSortedModel.pager)),
+							_jschomay$elm_paginate$Paginate$isLast(filteredSortedThings)),
 						_1: {ctor: '[]'}
 					}
 				},
@@ -8630,7 +8649,7 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 				_1: {
 					ctor: '::',
 					_0: _elm_lang$html$Html_Attributes$disabled(
-						_jschomay$elm_paginate$Paginate$isFirst(filteredSortedModel.pager)),
+						_jschomay$elm_paginate$Paginate$isFirst(filteredSortedThings)),
 					_1: {ctor: '[]'}
 				}
 			},
@@ -8649,7 +8668,7 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 					_1: {
 						ctor: '::',
 						_0: _elm_lang$html$Html_Attributes$disabled(
-							_jschomay$elm_paginate$Paginate$isFirst(filteredSortedModel.pager)),
+							_jschomay$elm_paginate$Paginate$isFirst(filteredSortedThings)),
 						_1: {ctor: '[]'}
 					}
 				},
@@ -8661,12 +8680,12 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 			_1: {ctor: '[]'}
 		}
 	};
-	var itemsPerPageView = A2(
+	var itemsPerPageSelector = A2(
 		_elm_lang$html$Html$div,
 		{ctor: '[]'},
 		{
 			ctor: '::',
-			_0: _elm_lang$html$Html$text('Show'),
+			_0: _elm_lang$html$Html$text('show'),
 			_1: {
 				ctor: '::',
 				_0: A2(
@@ -8771,35 +8790,134 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 				}
 			});
 	};
-	var displayingView = A2(
+	var displayInfoView = A2(
 		_elm_lang$html$Html$div,
 		{ctor: '[]'},
 		{
 			ctor: '::',
-			_0: _elm_lang$html$Html$text(
-				A2(
-					_elm_lang$core$String$join,
-					' ',
-					{
-						ctor: '::',
-						_0: 'Showing page',
-						_1: {
-							ctor: '::',
-							_0: _elm_lang$core$Basics$toString(
-								_jschomay$elm_paginate$Paginate$currentPage(filteredSortedModel.pager)),
-							_1: {
+			_0: A2(
+				_elm_lang$html$Html$div,
+				{ctor: '[]'},
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html$text(
+						A2(
+							_elm_lang$core$String$join,
+							' ',
+							{
 								ctor: '::',
-								_0: 'of',
+								_0: 'showing',
 								_1: {
 									ctor: '::',
 									_0: _elm_lang$core$Basics$toString(
-										_jschomay$elm_paginate$Paginate$totalPages(filteredSortedModel.pager)),
+										_elm_lang$core$List$length(
+											_jschomay$elm_paginate$Paginate$page(filteredSortedThings))),
+									_1: {
+										ctor: '::',
+										_0: 'of',
+										_1: {
+											ctor: '::',
+											_0: _elm_lang$core$Basics$toString(
+												_jschomay$elm_paginate$Paginate$length(filteredSortedThings)),
+											_1: {
+												ctor: '::',
+												_0: 'items',
+												_1: {ctor: '[]'}
+											}
+										}
+									}
+								}
+							})),
+					_1: {
+						ctor: '::',
+						_0: A2(
+							_elm_lang$html$Html$u,
+							{
+								ctor: '::',
+								_0: _elm_lang$html$Html_Events$onClick(_jschomay$elm_paginate$Example$AddItem),
+								_1: {
+									ctor: '::',
+									_0: _elm_lang$html$Html_Attributes$style(
+										{
+											ctor: '::',
+											_0: {ctor: '_Tuple2', _0: 'cursor', _1: 'pointer'},
+											_1: {ctor: '[]'}
+										}),
 									_1: {ctor: '[]'}
 								}
+							},
+							{
+								ctor: '::',
+								_0: _elm_lang$html$Html$text(' (add more!)'),
+								_1: {ctor: '[]'}
+							}),
+						_1: {ctor: '[]'}
+					}
+				}),
+			_1: {
+				ctor: '::',
+				_0: _elm_lang$html$Html$text(
+					A2(
+						_elm_lang$core$String$join,
+						' ',
+						{
+							ctor: '::',
+							_0: 'page',
+							_1: {
+								ctor: '::',
+								_0: _elm_lang$core$Basics$toString(
+									_jschomay$elm_paginate$Paginate$currentPage(filteredSortedThings)),
+								_1: {
+									ctor: '::',
+									_0: 'of',
+									_1: {
+										ctor: '::',
+										_0: _elm_lang$core$Basics$toString(
+											_jschomay$elm_paginate$Paginate$totalPages(filteredSortedThings)),
+										_1: {ctor: '[]'}
+									}
+								}
 							}
-						}
-					})),
-			_1: {ctor: '[]'}
+						})),
+				_1: {
+					ctor: '::',
+					_0: A2(
+						_elm_lang$html$Html$div,
+						{ctor: '[]'},
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html$text(
+								A2(
+									_elm_lang$core$String$join,
+									' ',
+									{
+										ctor: '::',
+										_0: 'including',
+										_1: {
+											ctor: '::',
+											_0: A2(
+												_jschomay$elm_paginate$Paginate$query,
+												function (_p3) {
+													return _elm_lang$core$Basics$toString(
+														_elm_lang$core$List$length(
+															A2(
+																_elm_lang$core$List$filter,
+																_elm_lang$core$String$contains('new item'),
+																_p3)));
+												},
+												filteredSortedThings),
+											_1: {
+												ctor: '::',
+												_0: 'new items',
+												_1: {ctor: '[]'}
+											}
+										}
+									})),
+							_1: {ctor: '[]'}
+						}),
+					_1: {ctor: '[]'}
+				}
+			}
 		});
 	return A2(
 		_elm_lang$html$Html$div,
@@ -8808,88 +8926,48 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 			_elm_lang$core$Basics_ops['++'],
 			{
 				ctor: '::',
-				_0: A2(
-					_elm_lang$html$Html$div,
-					{ctor: '[]'},
-					{
+				_0: displayInfoView,
+				_1: {
+					ctor: '::',
+					_0: itemsPerPageSelector,
+					_1: {
 						ctor: '::',
-						_0: _elm_lang$html$Html$text(
-							A2(
-								_elm_lang$core$Basics_ops['++'],
-								_elm_lang$core$Basics$toString(
-									_elm_lang$core$List$length(filteredSortedModel.things)),
-								' total items')),
+						_0: A2(
+							_elm_lang$html$Html$button,
+							{
+								ctor: '::',
+								_0: _elm_lang$html$Html_Events$onClick(_jschomay$elm_paginate$Example$Reverse),
+								_1: {ctor: '[]'}
+							},
+							{
+								ctor: '::',
+								_0: _elm_lang$html$Html$text('Reverse list'),
+								_1: {ctor: '[]'}
+							}),
 						_1: {
 							ctor: '::',
 							_0: A2(
-								_elm_lang$html$Html$u,
+								_elm_lang$html$Html$input,
 								{
 									ctor: '::',
-									_0: _elm_lang$html$Html_Events$onClick(_jschomay$elm_paginate$Example$AddItems),
+									_0: _elm_lang$html$Html_Attributes$placeholder('Search...'),
 									_1: {
 										ctor: '::',
-										_0: _elm_lang$html$Html_Attributes$style(
-											{
-												ctor: '::',
-												_0: {ctor: '_Tuple2', _0: 'cursor', _1: 'pointer'},
-												_1: {ctor: '[]'}
-											}),
+										_0: _elm_lang$html$Html_Events$onInput(_jschomay$elm_paginate$Example$Find),
 										_1: {ctor: '[]'}
 									}
 								},
-								{
-									ctor: '::',
-									_0: _elm_lang$html$Html$text(' (add more!)'),
-									_1: {ctor: '[]'}
-								}),
-							_1: {ctor: '[]'}
-						}
-					}),
-				_1: {
-					ctor: '::',
-					_0: displayingView,
-					_1: {
-						ctor: '::',
-						_0: itemsPerPageView,
-						_1: {
-							ctor: '::',
-							_0: A2(
-								_elm_lang$html$Html$button,
-								{
-									ctor: '::',
-									_0: _elm_lang$html$Html_Events$onClick(_jschomay$elm_paginate$Example$Reverse),
-									_1: {ctor: '[]'}
-								},
-								{
-									ctor: '::',
-									_0: _elm_lang$html$Html$text('Reverse list'),
-									_1: {ctor: '[]'}
-								}),
+								{ctor: '[]'}),
 							_1: {
 								ctor: '::',
 								_0: A2(
-									_elm_lang$html$Html$input,
-									{
-										ctor: '::',
-										_0: _elm_lang$html$Html_Attributes$placeholder('Search...'),
-										_1: {
-											ctor: '::',
-											_0: _elm_lang$html$Html_Events$onInput(_jschomay$elm_paginate$Example$Find),
-											_1: {ctor: '[]'}
-										}
-									},
-									{ctor: '[]'}),
-								_1: {
-									ctor: '::',
-									_0: A2(
-										_elm_lang$html$Html$ul,
-										{ctor: '[]'},
-										A2(
-											_elm_lang$core$List$map,
-											itemView,
-											A2(_jschomay$elm_paginate$Paginate$page, filteredSortedModel.pager, filteredSortedModel.things))),
-									_1: {ctor: '[]'}
-								}
+									_elm_lang$html$Html$ul,
+									{ctor: '[]'},
+									A2(
+										_elm_lang$core$List$map,
+										itemView,
+										_jschomay$elm_paginate$Paginate$page(filteredSortedThings))),
+								_1: {ctor: '[]'}
 							}
 						}
 					}
@@ -8905,7 +8983,7 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 						_0: A2(
 							_elm_lang$html$Html$span,
 							{ctor: '[]'},
-							A2(_jschomay$elm_paginate$Paginate$toList, pagerView, filteredSortedModel.pager)),
+							A2(_jschomay$elm_paginate$Paginate$pager, pagerButtonView, filteredSortedThings)),
 						_1: {ctor: '[]'}
 					},
 					nextButtons))));
@@ -8913,9 +8991,9 @@ var _jschomay$elm_paginate$Example$view = function (filteredSortedModel) {
 var _jschomay$elm_paginate$Example$main = _elm_lang$html$Html$beginnerProgram(
 	{
 		model: _jschomay$elm_paginate$Example$init,
-		view: function (_p2) {
+		view: function (_p4) {
 			return _jschomay$elm_paginate$Example$view(
-				_jschomay$elm_paginate$Example$filterAndSortThings(_p2));
+				_jschomay$elm_paginate$Example$filterAndSortThings(_p4));
 		},
 		update: _jschomay$elm_paginate$Example$update
 	})();
