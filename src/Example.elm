@@ -10,6 +10,7 @@ type alias Model =
     { things : PaginatedList String
     , reversed : Bool
     , query : String
+    , globalId : Int
     }
 
 
@@ -37,10 +38,15 @@ main =
 
 init : Model
 init =
-    { things = Paginate.fromList 10 <| List.map (toString >> (++) "item ") <| List.range 1 37
-    , reversed = False
-    , query = ""
-    }
+    let
+        things =
+            List.map (toString >> (++) "item ") <| List.range 1 37
+    in
+        { things = Paginate.fromList 10 things
+        , reversed = False
+        , query = ""
+        , globalId = List.length things
+        }
 
 
 update : Msg -> Model -> Model
@@ -77,10 +83,16 @@ update msg model =
 
         AddItem ->
             let
+                newId =
+                    model.globalId + 1
+
                 addItem existing =
-                    existing ++ (List.repeat 1 "new item")
+                    existing ++ [ "new item " ++ (toString newId) ]
             in
-                { model | things = Paginate.map addItem model.things }
+                { model
+                    | things = Paginate.map addItem model.things
+                    , globalId = newId
+                }
 
         Reverse ->
             { model | reversed = not model.reversed }

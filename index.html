@@ -8505,16 +8505,25 @@ var _jschomay$elm_paginate$Example$update = F2(
 						things: A2(_jschomay$elm_paginate$Paginate$map, removeItem, model.things)
 					});
 			case 'AddItem':
+				var newId = model.globalId + 1;
 				var addItem = function (existing) {
 					return A2(
 						_elm_lang$core$Basics_ops['++'],
 						existing,
-						A2(_elm_lang$core$List$repeat, 1, 'new item'));
+						{
+							ctor: '::',
+							_0: A2(
+								_elm_lang$core$Basics_ops['++'],
+								'new item ',
+								_elm_lang$core$Basics$toString(newId)),
+							_1: {ctor: '[]'}
+						});
 				};
 				return _elm_lang$core$Native_Utils.update(
 					model,
 					{
-						things: A2(_jschomay$elm_paginate$Paginate$map, addItem, model.things)
+						things: A2(_jschomay$elm_paginate$Paginate$map, addItem, model.things),
+						globalId: newId
 					});
 			case 'Reverse':
 				return _elm_lang$core$Native_Utils.update(
@@ -8526,28 +8535,29 @@ var _jschomay$elm_paginate$Example$update = F2(
 					{query: _p1._0});
 		}
 	});
-var _jschomay$elm_paginate$Example$init = {
-	things: A2(
-		_jschomay$elm_paginate$Paginate$fromList,
-		10,
-		A2(
-			_elm_lang$core$List$map,
-			function (_p2) {
-				return A2(
-					F2(
-						function (x, y) {
-							return A2(_elm_lang$core$Basics_ops['++'], x, y);
-						}),
-					'item ',
-					_elm_lang$core$Basics$toString(_p2));
-			},
-			A2(_elm_lang$core$List$range, 1, 37))),
-	reversed: false,
-	query: ''
-};
-var _jschomay$elm_paginate$Example$Model = F3(
-	function (a, b, c) {
-		return {things: a, reversed: b, query: c};
+var _jschomay$elm_paginate$Example$init = function () {
+	var things = A2(
+		_elm_lang$core$List$map,
+		function (_p2) {
+			return A2(
+				F2(
+					function (x, y) {
+						return A2(_elm_lang$core$Basics_ops['++'], x, y);
+					}),
+				'item ',
+				_elm_lang$core$Basics$toString(_p2));
+		},
+		A2(_elm_lang$core$List$range, 1, 37));
+	return {
+		things: A2(_jschomay$elm_paginate$Paginate$fromList, 10, things),
+		reversed: false,
+		query: '',
+		globalId: _elm_lang$core$List$length(things)
+	};
+}();
+var _jschomay$elm_paginate$Example$Model = F4(
+	function (a, b, c, d) {
+		return {things: a, reversed: b, query: c, globalId: d};
 	});
 var _jschomay$elm_paginate$Example$Find = function (a) {
 	return {ctor: 'Find', _0: a};
