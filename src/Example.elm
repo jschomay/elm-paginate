@@ -146,7 +146,7 @@ view filteredSortedThings =
                     [ text <|
                         String.join " "
                             [ "including"
-                            , Paginate.query
+                            , Paginate.foldMap
                                 (List.filter (String.contains "new item") >> List.length >> toString)
                                 filteredSortedThings
                             , "new items"

@@ -145,7 +145,7 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
                         [ text <|
                             String.join " "
                                 [ "including"
-                                , Paginate.query
+                                , Paginate.foldMap
                                     (List.filter (String.contains "new item") >> List.length >> toString)
                                     filteredSortedThings
                                 , "new items"

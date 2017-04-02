@@ -1,19 +1,24 @@
 [
   {
     "name": "Paginate",
-    "comment": " Encapsulate your pagination concerns from the rest of your app.\n\n# The PaginatedList type\n@docs PaginatedList\n\n# Constructing and modifying\n@docs fromList, map, changeItemsPerPage\n\n# Changing pages\n@docs goTo, next, prev, first, last\n\n# Accessors\n@docs length, currentPage, itemsPerPage, totalPages, isFirst, isLast, toList, query\n\n# Rendering\n@docs page, pager\n",
-    "aliases": [],
-    "types": [
+    "comment": " Pagination for `List`'s.\n\n# The PaginatedList type\n@docs PaginatedList\n\n# Constructing and modifying\n@docs fromList, map, changeItemsPerPage\n\n# Changing pages\n@docs goTo, next, prev, first, last\n\n# Retrieving items\n@docs page, allItems, foldMap\n\n# Pager helpers\nFunctions to help build a \"pager\" and useful paging data\n@docs pager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast\n",
+    "aliases": [
       {
         "name": "PaginatedList",
         "comment": " The `PaginatedList` type wraps your `list` and holds all of the information necessary to track pagination.  It does not modify your list in any way (unless you call `Paginate.map`).\n",
         "args": [
           "a"
         ],
-        "cases": []
+        "type": "Paginate.Custom.Paginated (List a)"
       }
     ],
+    "types": [],
     "values": [
+      {
+        "name": "allItems",
+        "comment": " Pull out the wrapped list (losing the pagination context).  Equivalent to `foldMap identity`.\n",
+        "type": "Paginate.PaginatedList a -> List a"
+      },
       {
         "name": "changeItemsPerPage",
         "comment": " Change the paging size.  The total number of pages will be updated accordingly, and the current page will remain unchanged if possible.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.  The minimum paging size is 1 item per page.\n",
@@ -28,6 +33,11 @@
         "name": "first",
         "comment": " Go to the first page.\n",
         "type": "Paginate.PaginatedList a -> Paginate.PaginatedList a"
+      },
+      {
+        "name": "foldMap",
+        "comment": " Remove the pagination context and run a function on the wrapped list.  Useful for many needs such as:\n\n    hasUnread = foldMap (List.any isUnread) myPaginatedList\n\n\n    numberOfFavorites = foldMap (List.filter isFavorite >> List.length) myPaginatedList\n\n\n    stickyItems = foldMap (List.filter isFavorite) myPaginatedList\n\n",
+        "type": "(List a -> b) -> Paginate.PaginatedList a -> b"
       },
       {
         "name": "fromList",
@@ -61,7 +71,7 @@
       },
       {
         "name": "length",
-        "comment": " Get the length of the wrapped list.\n",
+        "comment": " Get the length of the wrapped list.  Equivalent to `foldMap List.length`.\n",
         "type": "Paginate.PaginatedList a -> Int"
       },
       {
@@ -90,19 +100,107 @@
         "type": "Paginate.PaginatedList a -> Paginate.PaginatedList a"
       },
       {
-        "name": "query",
-        "comment": " Run an arbitrary function on the wrapped list (losing the pagination context).  Probably most useful for querying the list.  Or if you want to pull certain items out of pagination to making them \"sticky.\"\n\n    hasUnread = query (List.any isUnread) myPaginatedList\n\n\n    numberOfFavorites = query (List.filter isFavorite >> List.length) myPaginatedList\n\n\n    nonPaginatedFavorites = query (List.filter isFavorite) myPaginatedList\n\n",
-        "type": "(List a -> b) -> Paginate.PaginatedList a -> b"
+        "name": "totalPages",
+        "comment": " Get the total number of pages.\n",
+        "type": "Paginate.PaginatedList a -> Int"
+      }
+    ],
+    "generated-with-elm-version": "0.18.0"
+  },
+  {
+    "name": "Paginate.Custom",
+    "comment": " Pagination for custom collection types.\n\nOnly use this module if you want to paginate something other than a `List`.  This might be useful if you desire an `Array` or `Dict` or even `LazyList` or `Stream` as your collection, however, you will need to provide a `length` and `slice` function to many of the functions here (see `Paginate` for an implementation example, and for full documentation).  Most of the time `Paginate` is what you will want to use.\n\n# The Paginated type\n@docs Paginated\n\n# Constructing and modifying\n@docs init, map, changeItemsPerPage\n\n# Changing pages\n@docs goTo, next, prev, first, last\n\n# Retrieving items\n@docs page, foldMap\n\n# Pager helpers\nFunctions to help build a \"pager\" and useful paging data\n@docs pager, currentPage, itemsPerPage, totalPages, isFirst, isLast\n",
+    "aliases": [],
+    "types": [
+      {
+        "name": "Paginated",
+        "comment": " The `Paginated` type wraps your custom collection and holds all of the information necessary to track pagination.  It does not modify your collection in any way (unless you call `Paginate.Custom.map`).\n",
+        "args": [
+          "a"
+        ],
+        "cases": []
+      }
+    ],
+    "values": [
+      {
+        "name": "changeItemsPerPage",
+        "comment": " Change the paging size.  You must supply a length function as the first argument.  The total number of pages will be updated accordingly, and the current page will remain unchanged if possible.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.  The minimum paging size is 1 item per page.\n",
+        "type": "(a -> Int) -> Int -> Paginate.Custom.Paginated a -> Paginate.Custom.Paginated a"
       },
       {
-        "name": "toList",
-        "comment": " Pull out the wrapped list (losing the pagination context).  Consider using `query` instead.\n",
-        "type": "Paginate.PaginatedList a -> List a"
+        "name": "currentPage",
+        "comment": " Get the current page of the `Paginated`.\n",
+        "type": "Paginate.Custom.Paginated a -> Int"
+      },
+      {
+        "name": "first",
+        "comment": " Go to the first page.\n",
+        "type": "Paginate.Custom.Paginated a -> Paginate.Custom.Paginated a"
+      },
+      {
+        "name": "foldMap",
+        "comment": " Remove the pagination context and run a function on the wrapped collection.\n",
+        "type": "(a -> b) -> Paginate.Custom.Paginated a -> b"
+      },
+      {
+        "name": "goTo",
+        "comment": " Set the current page directly.  If the specified page is \"out of bounds\" of the paginated collection, it will be set to the first or last page accordingly.\n",
+        "type": "Int -> Paginate.Custom.Paginated a -> Paginate.Custom.Paginated a"
+      },
+      {
+        "name": "init",
+        "comment": " Create a new paginated collection.  You must supply it with a function to get the length of your collection, as well as the desired number of items per page and your custom collection of items to be paginated.  The current page is always initialized to 1.  The minimum number of items per page is 1.  The minimum number of total pages is 1 (even if you pass in an empty collection).\n",
+        "type": "(a -> Int) -> Int -> a -> Paginate.Custom.Paginated a"
+      },
+      {
+        "name": "isFirst",
+        "comment": " Useful to conditionally show a \"prev\" button.\n",
+        "type": "Paginate.Custom.Paginated a -> Bool"
+      },
+      {
+        "name": "isLast",
+        "comment": " Useful to conditionally show a \"next\" button.\n",
+        "type": "Paginate.Custom.Paginated a -> Bool"
+      },
+      {
+        "name": "itemsPerPage",
+        "comment": " Get the number of items per page.\n",
+        "type": "Paginate.Custom.Paginated a -> Int"
+      },
+      {
+        "name": "last",
+        "comment": " Go to the last page.\n",
+        "type": "Paginate.Custom.Paginated a -> Paginate.Custom.Paginated a"
+      },
+      {
+        "name": "map",
+        "comment": " Transform the collection inside the `Paginated` by providing a function to apply to the wrapped collection.  You must supply a length function as the first argument, then the transformation function.  This is how you map, filter, sort and update items.  If this function changes the length of the collection, the pagination calculations will be updated accordingly.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.\n",
+        "type": "(a -> Int) -> (a -> a) -> Paginate.Custom.Paginated a -> Paginate.Custom.Paginated a"
+      },
+      {
+        "name": "next",
+        "comment": " Go to the next page.  Has no effect if you are already on the last page.\n",
+        "type": "Paginate.Custom.Paginated a -> Paginate.Custom.Paginated a"
+      },
+      {
+        "name": "page",
+        "comment": " Get the \"slice\" of the wrapped collection for the current page.  You must supply a \"slice\" function as the first argument, which will be with a \"from\" (inclusive) and a \"to\" (exclusive).  Usually you would call this and pass the result on to your view function.\n",
+        "type": "(Int -> Int -> a -> a) -> Paginate.Custom.Paginated a -> a"
+      },
+      {
+        "name": "pager",
+        "comment": " Build a \"pager\" for your paginated collection.  Usually you would use this to render the pager view.  The supplied function is given the current page number being iterated over and whether that page is the current page.\n",
+        "type": "(Int -> Bool -> b) -> Paginate.Custom.Paginated a -> List b"
+      },
+      {
+        "name": "prev",
+        "comment": " Go to the previous page.  Has no effect if you are already on the first page.\n",
+        "type": "Paginate.Custom.Paginated a -> Paginate.Custom.Paginated a"
       },
       {
         "name": "totalPages",
         "comment": " Get the total number of pages.\n",
-        "type": "Paginate.PaginatedList a -> Int"
+        "type": "Paginate.Custom.Paginated a -> Int"
       }
     ],
     "generated-with-elm-version": "0.18.0"

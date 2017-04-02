@@ -59,7 +59,7 @@ all =
                         updated =
                             (changeItemsPerPage 3 <| goTo 2 <| fromList 2 [ 1, 2, 3, 4 ])
                     in
-                        Expect.equal ( 2, 3, [ 1, 2, 3, 4 ] ) ( currentPage updated, itemsPerPage updated, toList updated )
+                        Expect.equal ( 2, 3, [ 1, 2, 3, 4 ] ) ( currentPage updated, itemsPerPage updated, allItems updated )
             , test "recalculates the total number of pages" <|
                 \_ ->
                     Expect.equal 3 (totalPages <| changeItemsPerPage 1 <| fromList 3 [ 1, 2, 3 ])
@@ -126,7 +126,7 @@ all =
         , describe "query"
             [ fuzz (list int) "escapes the context" <|
                 \items ->
-                    Expect.equal (List.head items) (query (List.head) <| fromList 3 items)
+                    Expect.equal (List.head items) (foldMap (List.head) <| fromList 3 items)
             ]
         , describe "page"
             [ test "gives the correct slice of a list" <|
