@@ -3,7 +3,7 @@
     "name": "jschomay/elm-paginate",
     "summary": "Simple and robust pagination in elm",
     "license": "BSD-3-Clause",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "exposed-modules": [
         "Paginate",
         "Paginate.Custom"
