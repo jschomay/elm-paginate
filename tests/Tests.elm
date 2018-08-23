@@ -1,10 +1,9 @@
 module Tests exposing (all)
 
-import Paginate exposing (..)
-import ElmTest.Extra exposing (..)
-import ElmTest.Extra exposing (..)
 import Expect
-import Fuzz exposing (list, int, tuple, string, constant)
+import Fuzz exposing (constant, int, list, string, tuple)
+import Paginate exposing (..)
+import Test exposing (..)
 
 
 all : Test
@@ -46,7 +45,7 @@ all =
                 , fuzz2 int (list int) "law of composition" <|
                     \itemsPerPage items ->
                         Expect.equal (map (List.map negate >> List.map negate) <| fromList itemsPerPage items)
-                            ((map (List.map negate)) >> (map (List.map negate)) <| fromList itemsPerPage items)
+                            (map (List.map negate) >> map (List.map negate) <| fromList itemsPerPage items)
                 ]
             ]
         , describe "changeItemsPerPage"
@@ -57,9 +56,9 @@ all =
                 \_ ->
                     let
                         updated =
-                            (changeItemsPerPage 3 <| goTo 2 <| fromList 2 [ 1, 2, 3, 4 ])
+                            changeItemsPerPage 3 <| goTo 2 <| fromList 2 [ 1, 2, 3, 4 ]
                     in
-                        Expect.equal ( 2, 3, [ 1, 2, 3, 4 ] ) ( currentPage updated, itemsPerPage updated, allItems updated )
+                    Expect.equal ( 2, 3, [ 1, 2, 3, 4 ] ) ( currentPage updated, itemsPerPage updated, allItems updated )
             , test "recalculates the total number of pages" <|
                 \_ ->
                     Expect.equal 3 (totalPages <| changeItemsPerPage 1 <| fromList 3 [ 1, 2, 3 ])
@@ -126,7 +125,7 @@ all =
         , describe "query"
             [ fuzz (list int) "escapes the context" <|
                 \items ->
-                    Expect.equal (List.head items) (foldMap (List.head) <| fromList 3 items)
+                    Expect.equal (List.head items) (foldMap List.head <| fromList 3 items)
             ]
         , describe "page"
             [ test "gives the correct slice of a list" <|
@@ -138,14 +137,14 @@ all =
                         totalItems =
                             Basics.min totalItems_ 100 |> Basics.max 0
                     in
-                        Expect.true "page size exceeded itemsPerPage" <|
-                            (List.length <| page <| goTo pageNum <| fromList itemsPerPage <| List.range 1 totalItems)
-                                <= totalItems
+                    Expect.true "page size exceeded itemsPerPage" <|
+                        (List.length <| page <| goTo pageNum <| fromList itemsPerPage <| List.range 1 totalItems)
+                            <= totalItems
             ]
         , describe "pager"
             [ test "makes a pager" <|
                 \_ ->
                     Expect.equal [ ( 1, False ), ( 2, True ), ( 3, False ) ]
-                        (pager (,) <| next <| fromList 2 [ 1, 2, 3, 4, 5, 6 ])
+                        (pager (\a b -> ( a, b )) <| next <| fromList 2 [ 1, 2, 3, 4, 5, 6 ])
             ]
         ]

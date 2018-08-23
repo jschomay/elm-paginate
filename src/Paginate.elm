@@ -1,55 +1,52 @@
-module Paginate
-    exposing
-        ( PaginatedList
-        , fromList
-        , map
-        , changeItemsPerPage
-        , goTo
-        , next
-        , prev
-        , first
-        , last
-        , length
-        , currentPage
-        , itemsPerPage
-        , totalPages
-        , isFirst
-        , isLast
-        , allItems
-        , foldMap
-        , page
-        , pager
-        )
+module Paginate exposing
+    ( PaginatedList
+    , fromList, map, changeItemsPerPage
+    , goTo, next, prev, first, last
+    , page, allItems, foldMap
+    , pager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
+    )
 
 {-| Pagination for `List`'s.
 
+
 # The PaginatedList type
+
 @docs PaginatedList
 
+
 # Constructing and modifying
+
 @docs fromList, map, changeItemsPerPage
 
+
 # Changing pages
+
 @docs goTo, next, prev, first, last
 
+
 # Retrieving items
+
 @docs page, allItems, foldMap
 
+
 # Pager helpers
+
 Functions to help build a "pager" and useful paging data
+
 @docs pager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
+
 -}
 
 import Paginate.Custom
 
 
-{-| The `PaginatedList` type wraps your `list` and holds all of the information necessary to track pagination.  It does not modify your list in any way (unless you call `Paginate.map`).
+{-| The `PaginatedList` type wraps your `list` and holds all of the information necessary to track pagination. It does not modify your list in any way (unless you call `Paginate.map`).
 -}
 type alias PaginatedList a =
     Paginate.Custom.Paginated (List a)
 
 
-{-| Create a new paginated list.  Pass it the desired number of items per page and the list of items to be paginated.  The current page is always initialized to 1.  The minimum number of items per page is 1.  The minimum number of total pages is 1 (even if you pass in an empty list).
+{-| Create a new paginated list. Pass it the desired number of items per page and the list of items to be paginated. The current page is always initialized to 1. The minimum number of items per page is 1. The minimum number of total pages is 1 (even if you pass in an empty list).
 
       fromList 10 myItems
           |> currentPage
@@ -61,20 +58,22 @@ fromList a b =
     Paginate.Custom.init List.length a b
 
 
-{-| Transform the list inside the `PaginatedList` by providing a function to apply to the wrapped list.  This is how you map, filter, sort and update items in the paginated list.  If this function changes the length of the list, the pagination calculations will be updated accordingly.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.
+{-| Transform the list inside the `PaginatedList` by providing a function to apply to the wrapped list. This is how you map, filter, sort and update items in the paginated list. If this function changes the length of the list, the pagination calculations will be updated accordingly. If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.
 
-    filtered = Paginate.map (List.filter isFavorited) myPaginatedList
+    filtered =
+        Paginate.map (List.filter isFavorited) myPaginatedList
+
+
     -- the paginated list now only contains the items matching your filter
     -- also the number of pages will update to stay in sync
+    sorted =
+        Paginate.map List.sort myPaginatedList
 
+    filteredAndSorted =
+        Paginate.map (List.filter isFavorited >> List.sort) myPaginatedList
 
-    sorted = Paginate.map List.sort myPaginatedList
-
-
-    filteredAndSorted = Paginate.map (List.filter isFavorited >> List.sort) myPaginatedList
-
-
-    updated = Paginate.map (\items -> updateById id newData items) myPaginatedList
+    updated =
+        Paginate.map (\items -> updateById id newData items) myPaginatedList
 
 -}
 map : (List a -> List a) -> PaginatedList a -> PaginatedList a
@@ -82,28 +81,28 @@ map =
     Paginate.Custom.map List.length
 
 
-{-| Change the paging size.  The total number of pages will be updated accordingly, and the current page will remain unchanged if possible.  If the newly calculated number of pages is less than the current page, the current page will be set to the new last page.  The minimum paging size is 1 item per page.
+{-| Change the paging size. The total number of pages will be updated accordingly, and the current page will remain unchanged if possible. If the newly calculated number of pages is less than the current page, the current page will be set to the new last page. The minimum paging size is 1 item per page.
 -}
 changeItemsPerPage : Int -> PaginatedList a -> PaginatedList a
 changeItemsPerPage =
     Paginate.Custom.changeItemsPerPage List.length
 
 
-{-| Set the current page directly.  If the specified page is "out of bounds" of the paginated list, it will be set to the first or last page accordingly.
+{-| Set the current page directly. If the specified page is "out of bounds" of the paginated list, it will be set to the first or last page accordingly.
 -}
 goTo : Int -> PaginatedList a -> PaginatedList a
 goTo =
     Paginate.Custom.goTo
 
 
-{-| Go to the next page.  Has no effect if you are already on the last page.
+{-| Go to the next page. Has no effect if you are already on the last page.
 -}
 next : PaginatedList a -> PaginatedList a
 next =
     Paginate.Custom.next
 
 
-{-| Go to the previous page.  Has no effect if you are already on the first page.
+{-| Go to the previous page. Has no effect if you are already on the first page.
 -}
 prev : PaginatedList a -> PaginatedList a
 prev =
@@ -138,7 +137,7 @@ isLast =
     Paginate.Custom.isLast
 
 
-{-| Get the length of the wrapped list.  Equivalent to `foldMap List.length`.
+{-| Get the length of the wrapped list. Equivalent to `foldMap List.length`.
 -}
 length : PaginatedList a -> Int
 length =
@@ -166,22 +165,23 @@ totalPages =
     Paginate.Custom.totalPages
 
 
-{-| Pull out the wrapped list (losing the pagination context).  Equivalent to `foldMap identity`.
+{-| Pull out the wrapped list (losing the pagination context). Equivalent to `foldMap identity`.
 -}
 allItems : PaginatedList a -> List a
 allItems =
     Paginate.Custom.foldMap identity
 
 
-{-| Remove the pagination context and run a function on the wrapped list.  Useful for many needs such as:
+{-| Remove the pagination context and run a function on the wrapped list. Useful for many needs such as:
 
-    hasUnread = foldMap (List.any isUnread) myPaginatedList
+    hasUnread =
+        foldMap (List.any isUnread) myPaginatedList
 
+    numberOfFavorites =
+        foldMap (List.filter isFavorite >> List.length) myPaginatedList
 
-    numberOfFavorites = foldMap (List.filter isFavorite >> List.length) myPaginatedList
-
-
-    stickyItems = foldMap (List.filter isFavorite) myPaginatedList
+    stickyItems =
+        foldMap (List.filter isFavorite) myPaginatedList
 
 -}
 foldMap : (List a -> b) -> PaginatedList a -> b
@@ -189,7 +189,7 @@ foldMap =
     Paginate.Custom.foldMap
 
 
-{-| Get the "slice" of the wrapped list for the current page.  Usually you would call this and pass the result on to your view function.
+{-| Get the "slice" of the wrapped list for the current page. Usually you would call this and pass the result on to your view function.
 
     List.range 1 100 |> fromList 10 |> goTo 3 |> page
     -- equals [ 21, 22, 23, 24, 25, 26, 27, 28, 29 30 ]
@@ -205,7 +205,7 @@ page =
             List.drop from >> List.take (to - from)
 
 
-{-| Build a "pager" for your paginated list.  Usually you would use this to render the pager view.  The supplied function is given the current page number being iterated over and whether that page is the current page.
+{-| Build a "pager" for your paginated list. Usually you would use this to render the pager view. The supplied function is given the current page number being iterated over and whether that page is the current page.
 
     fromList 2 [ 1, 2, 3, 4, 5, 6 ]
         |> next

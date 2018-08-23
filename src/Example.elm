@@ -1,9 +1,10 @@
 module Example exposing (main)
 
-import Paginate exposing (..)
+import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Paginate exposing (..)
 
 
 type alias Model =
@@ -27,10 +28,10 @@ type Msg
     | Find String
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Html.beginnerProgram
-        { model = init
+    Browser.sandbox
+        { init = init
         , view = filterAndSortThings >> view
         , update = update
         }
@@ -40,13 +41,13 @@ init : Model
 init =
     let
         things =
-            List.map (toString >> (++) "item ") <| List.range 1 37
+            List.map (String.fromInt >> (++) "item ") <| List.range 1 37
     in
-        { things = Paginate.fromList 10 things
-        , reversed = False
-        , query = ""
-        , globalId = List.length things
-        }
+    { things = Paginate.fromList 10 things
+    , reversed = False
+    , query = ""
+    , globalId = List.length things
+    }
 
 
 update : Msg -> Model -> Model
@@ -70,16 +71,16 @@ update msg model =
         ChangePageSize size ->
             let
                 sizeAsInt =
-                    Result.withDefault 10 <| String.toInt size
+                    Maybe.withDefault 10 <| String.toInt size
             in
-                { model | things = Paginate.changeItemsPerPage sizeAsInt model.things }
+            { model | things = Paginate.changeItemsPerPage sizeAsInt model.things }
 
         DeleteItem item ->
             let
                 removeItem =
                     List.filter ((/=) item)
             in
-                { model | things = Paginate.map removeItem model.things }
+            { model | things = Paginate.map removeItem model.things }
 
         AddItem ->
             let
@@ -87,12 +88,12 @@ update msg model =
                     model.globalId + 1
 
                 addItem existing =
-                    existing ++ [ "new item " ++ (toString newId) ]
+                    existing ++ [ "new item " ++ String.fromInt newId ]
             in
-                { model
-                    | things = Paginate.map addItem model.things
-                    , globalId = newId
-                }
+            { model
+                | things = Paginate.map addItem model.things
+                , globalId = newId
+            }
 
         Reverse ->
             { model | reversed = not model.reversed }
@@ -107,16 +108,18 @@ filterAndSortThings model =
         sort =
             if model.reversed then
                 List.reverse
+
             else
                 identity
 
         filter =
             if model.query == "" then
                 identity
+
             else
-                List.filter (\thing -> String.contains model.query (toString thing))
+                List.filter (\thing -> String.contains model.query thing)
     in
-        Paginate.map (filter >> sort) model.things
+    Paginate.map (filter >> sort) model.things
 
 
 view : PaginatedList String -> Html Msg
@@ -128,26 +131,26 @@ view filteredSortedThings =
                     [ text <|
                         String.join " " <|
                             [ "showing"
-                            , (toString <| List.length <| Paginate.page filteredSortedThings)
+                            , String.fromInt <| List.length <| Paginate.page filteredSortedThings
                             , "of"
-                            , (toString <| Paginate.length filteredSortedThings)
+                            , String.fromInt <| Paginate.length filteredSortedThings
                             , "items"
                             ]
-                    , u [ onClick <| AddItem, style [ ( "cursor", "pointer" ) ] ] [ text " (add more!)" ]
+                    , u [ onClick <| AddItem, style "cursor" "pointer" ] [ text " (add more!)" ]
                     ]
                 , text <|
                     String.join " "
                         [ "page"
-                        , toString <| Paginate.currentPage filteredSortedThings
+                        , String.fromInt <| Paginate.currentPage filteredSortedThings
                         , "of"
-                        , toString <| Paginate.totalPages filteredSortedThings
+                        , String.fromInt <| Paginate.totalPages filteredSortedThings
                         ]
                 , div []
                     [ text <|
                         String.join " "
                             [ "including"
                             , Paginate.foldMap
-                                (List.filter (String.contains "new item") >> List.length >> toString)
+                                (List.filter (String.contains "new item") >> List.length >> String.fromInt)
                                 filteredSortedThings
                             , "new items"
                             ]
@@ -157,7 +160,7 @@ view filteredSortedThings =
         itemView item =
             li []
                 [ span [] [ text item ]
-                , u [ onClick <| DeleteItem item, style [ ( "cursor", "pointer" ) ] ] [ text " (delete)" ]
+                , u [ onClick <| DeleteItem item, style "cursor" "pointer" ] [ text " (delete)" ]
                 ]
 
         itemsPerPageSelector =
@@ -183,25 +186,24 @@ view filteredSortedThings =
 
         pagerButtonView index isActive =
             button
-                [ style
-                    [ ( "font-weight"
-                      , if isActive then
-                            "bold"
-                        else
-                            "normal"
-                      )
-                    ]
+                [ style "font-weight"
+                    (if isActive then
+                        "bold"
+
+                     else
+                        "normal"
+                    )
                 , onClick <| GoTo index
                 ]
-                [ text <| toString index ]
+                [ text <| String.fromInt index ]
     in
-        div [] <|
-            [ displayInfoView
-            , itemsPerPageSelector
-            , button [ onClick Reverse ] [ text "Reverse list" ]
-            , input [ placeholder "Search...", onInput Find ] []
-            , ul [] (List.map itemView <| Paginate.page filteredSortedThings)
-            ]
-                ++ prevButtons
-                ++ [ span [] <| Paginate.pager pagerButtonView filteredSortedThings ]
-                ++ nextButtons
+    div [] <|
+        [ displayInfoView
+        , itemsPerPageSelector
+        , button [ onClick Reverse ] [ text "Reverse list" ]
+        , input [ placeholder "Search...", onInput Find ] []
+        , ul [] (List.map itemView <| Paginate.page filteredSortedThings)
+        ]
+            ++ prevButtons
+            ++ [ span [] <| Paginate.pager pagerButtonView filteredSortedThings ]
+            ++ nextButtons
