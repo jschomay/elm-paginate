@@ -167,7 +167,8 @@ view filteredSortedThings =
             div []
                 [ text "show"
                 , select [ onInput ChangePageSize ]
-                    [ option [ value "10" ] [ text "10" ]
+                    [ option [ value "3" ] [ text "3" ]
+                    , option [ value "10", selected True ] [ text "10" ]
                     , option [ value "20" ] [ text "20" ]
                     , option [ value "30" ] [ text "30" ]
                     ]
@@ -196,6 +197,13 @@ view filteredSortedThings =
                 , onClick <| GoTo index
                 ]
                 [ text <| String.fromInt index ]
+
+        pagerOptions =
+            { innerWindow = 1
+            , outerWindow = 1
+            , pageNumberView = pagerButtonView
+            , gapView = text "..."
+            }
     in
     div [] <|
         [ displayInfoView
@@ -207,3 +215,6 @@ view filteredSortedThings =
             ++ prevButtons
             ++ [ span [] <| Paginate.pager pagerButtonView filteredSortedThings ]
             ++ nextButtons
+            ++ [ p [] [ text "Elidied pager (set items per page to 3 to see it elide)" ]
+               , span [] <| Paginate.elidedPager pagerOptions filteredSortedThings
+               ]

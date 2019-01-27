@@ -262,7 +262,7 @@ function _Utils_cmp(x, y, ord)
 	//*/
 
 	/**_UNUSED/
-	if (!x.$)
+	if (typeof x.$ === 'undefined')
 	//*/
 	/**/
 	if (x.$[0] === '#')
@@ -643,6 +643,16 @@ function _Debug_toAnsiString(ansi, value)
 		return _Debug_ctorColor(ansi, tag) + output;
 	}
 
+	if (typeof DataView === 'function' && value instanceof DataView)
+	{
+		return _Debug_stringColor(ansi, '<' + value.byteLength + ' bytes>');
+	}
+
+	if (typeof File === 'function' && value instanceof File)
+	{
+		return _Debug_internalColor(ansi, '<' + value.name + '>');
+	}
+
 	if (typeof value === 'object')
 	{
 		var output = [];
@@ -711,6 +721,10 @@ function _Debug_internalColor(ansi, string)
 	return ansi ? '\x1b[94m' + string + '\x1b[0m' : string;
 }
 
+function _Debug_toHexDigit(n)
+{
+	return String.fromCharCode(n < 10 ? 48 + n : 55 + n);
+}
 
 
 // CRASH
@@ -869,9 +883,7 @@ function _Char_fromCode(code)
 			? String.fromCharCode(code)
 			:
 		(code -= 0x10000,
-			String.fromCharCode(Math.floor(code / 0x400) + 0xD800)
-			+
-			String.fromCharCode(code % 0x400 + 0xDC00)
+			String.fromCharCode(Math.floor(code / 0x400) + 0xD800, code % 0x400 + 0xDC00)
 		)
 	);
 }
@@ -1236,21 +1248,56 @@ function _Json_fail(msg)
 	};
 }
 
-var _Json_decodeInt = { $: 2 };
-var _Json_decodeBool = { $: 3 };
-var _Json_decodeFloat = { $: 4 };
-var _Json_decodeValue = { $: 5 };
-var _Json_decodeString = { $: 6 };
+function _Json_decodePrim(decoder)
+{
+	return { $: 2, b: decoder };
+}
 
-function _Json_decodeList(decoder) { return { $: 7, b: decoder }; }
-function _Json_decodeArray(decoder) { return { $: 8, b: decoder }; }
+var _Json_decodeInt = _Json_decodePrim(function(value) {
+	return (typeof value !== 'number')
+		? _Json_expecting('an INT', value)
+		:
+	(-2147483647 < value && value < 2147483647 && (value | 0) === value)
+		? elm$core$Result$Ok(value)
+		:
+	(isFinite(value) && !(value % 1))
+		? elm$core$Result$Ok(value)
+		: _Json_expecting('an INT', value);
+});
 
-function _Json_decodeNull(value) { return { $: 9, c: value }; }
+var _Json_decodeBool = _Json_decodePrim(function(value) {
+	return (typeof value === 'boolean')
+		? elm$core$Result$Ok(value)
+		: _Json_expecting('a BOOL', value);
+});
+
+var _Json_decodeFloat = _Json_decodePrim(function(value) {
+	return (typeof value === 'number')
+		? elm$core$Result$Ok(value)
+		: _Json_expecting('a FLOAT', value);
+});
+
+var _Json_decodeValue = _Json_decodePrim(function(value) {
+	return elm$core$Result$Ok(_Json_wrap(value));
+});
+
+var _Json_decodeString = _Json_decodePrim(function(value) {
+	return (typeof value === 'string')
+		? elm$core$Result$Ok(value)
+		: (value instanceof String)
+			? elm$core$Result$Ok(value + '')
+			: _Json_expecting('a STRING', value);
+});
+
+function _Json_decodeList(decoder) { return { $: 3, b: decoder }; }
+function _Json_decodeArray(decoder) { return { $: 4, b: decoder }; }
+
+function _Json_decodeNull(value) { return { $: 5, c: value }; }
 
 var _Json_decodeField = F2(function(field, decoder)
 {
 	return {
-		$: 10,
+		$: 6,
 		d: field,
 		b: decoder
 	};
@@ -1259,7 +1306,7 @@ var _Json_decodeField = F2(function(field, decoder)
 var _Json_decodeIndex = F2(function(index, decoder)
 {
 	return {
-		$: 11,
+		$: 7,
 		e: index,
 		b: decoder
 	};
@@ -1268,7 +1315,7 @@ var _Json_decodeIndex = F2(function(index, decoder)
 function _Json_decodeKeyValuePairs(decoder)
 {
 	return {
-		$: 12,
+		$: 8,
 		b: decoder
 	};
 }
@@ -1276,7 +1323,7 @@ function _Json_decodeKeyValuePairs(decoder)
 function _Json_mapMany(f, decoders)
 {
 	return {
-		$: 13,
+		$: 9,
 		f: f,
 		g: decoders
 	};
@@ -1285,7 +1332,7 @@ function _Json_mapMany(f, decoders)
 var _Json_andThen = F2(function(callback, decoder)
 {
 	return {
-		$: 14,
+		$: 10,
 		b: decoder,
 		h: callback
 	};
@@ -1294,7 +1341,7 @@ var _Json_andThen = F2(function(callback, decoder)
 function _Json_oneOf(decoders)
 {
 	return {
-		$: 15,
+		$: 11,
 		g: decoders
 	};
 }
@@ -1367,61 +1414,29 @@ function _Json_runHelp(decoder, value)
 {
 	switch (decoder.$)
 	{
-		case 3:
-			return (typeof value === 'boolean')
-				? elm$core$Result$Ok(value)
-				: _Json_expecting('a BOOL', value);
-
 		case 2:
-			if (typeof value !== 'number') {
-				return _Json_expecting('an INT', value);
-			}
+			return decoder.b(value);
 
-			if (-2147483647 < value && value < 2147483647 && (value | 0) === value) {
-				return elm$core$Result$Ok(value);
-			}
-
-			if (isFinite(value) && !(value % 1)) {
-				return elm$core$Result$Ok(value);
-			}
-
-			return _Json_expecting('an INT', value);
-
-		case 4:
-			return (typeof value === 'number')
-				? elm$core$Result$Ok(value)
-				: _Json_expecting('a FLOAT', value);
-
-		case 6:
-			return (typeof value === 'string')
-				? elm$core$Result$Ok(value)
-				: (value instanceof String)
-					? elm$core$Result$Ok(value + '')
-					: _Json_expecting('a STRING', value);
-
-		case 9:
+		case 5:
 			return (value === null)
 				? elm$core$Result$Ok(decoder.c)
 				: _Json_expecting('null', value);
 
-		case 5:
-			return elm$core$Result$Ok(_Json_wrap(value));
-
-		case 7:
-			if (!Array.isArray(value))
+		case 3:
+			if (!_Json_isArray(value))
 			{
 				return _Json_expecting('a LIST', value);
 			}
 			return _Json_runArrayDecoder(decoder.b, value, _List_fromArray);
 
-		case 8:
-			if (!Array.isArray(value))
+		case 4:
+			if (!_Json_isArray(value))
 			{
 				return _Json_expecting('an ARRAY', value);
 			}
 			return _Json_runArrayDecoder(decoder.b, value, _Json_toElmArray);
 
-		case 10:
+		case 6:
 			var field = decoder.d;
 			if (typeof value !== 'object' || value === null || !(field in value))
 			{
@@ -1430,9 +1445,9 @@ function _Json_runHelp(decoder, value)
 			var result = _Json_runHelp(decoder.b, value[field]);
 			return (elm$core$Result$isOk(result)) ? result : elm$core$Result$Err(A2(elm$json$Json$Decode$Field, field, result.a));
 
-		case 11:
+		case 7:
 			var index = decoder.e;
-			if (!Array.isArray(value))
+			if (!_Json_isArray(value))
 			{
 				return _Json_expecting('an ARRAY', value);
 			}
@@ -1443,8 +1458,8 @@ function _Json_runHelp(decoder, value)
 			var result = _Json_runHelp(decoder.b, value[index]);
 			return (elm$core$Result$isOk(result)) ? result : elm$core$Result$Err(A2(elm$json$Json$Decode$Index, index, result.a));
 
-		case 12:
-			if (typeof value !== 'object' || value === null || Array.isArray(value))
+		case 8:
+			if (typeof value !== 'object' || value === null || _Json_isArray(value))
 			{
 				return _Json_expecting('an OBJECT', value);
 			}
@@ -1465,7 +1480,7 @@ function _Json_runHelp(decoder, value)
 			}
 			return elm$core$Result$Ok(elm$core$List$reverse(keyValuePairs));
 
-		case 13:
+		case 9:
 			var answer = decoder.f;
 			var decoders = decoder.g;
 			for (var i = 0; i < decoders.length; i++)
@@ -1479,13 +1494,13 @@ function _Json_runHelp(decoder, value)
 			}
 			return elm$core$Result$Ok(answer);
 
-		case 14:
+		case 10:
 			var result = _Json_runHelp(decoder.b, value);
 			return (!elm$core$Result$isOk(result))
 				? result
 				: _Json_runHelp(decoder.h(result.a), value);
 
-		case 15:
+		case 11:
 			var errors = _List_Nil;
 			for (var temp = decoder.g; temp.b; temp = temp.b) // WHILE_CONS
 			{
@@ -1522,6 +1537,11 @@ function _Json_runArrayDecoder(decoder, value, toElmValue)
 	return elm$core$Result$Ok(toElmValue(array));
 }
 
+function _Json_isArray(value)
+{
+	return Array.isArray(value) || (typeof FileList === 'function' && value instanceof FileList);
+}
+
 function _Json_toElmArray(array)
 {
 	return A2(elm$core$Array$initialize, array.length, function(i) { return array[i]; });
@@ -1553,34 +1573,30 @@ function _Json_equality(x, y)
 		case 1:
 			return x.a === y.a;
 
-		case 3:
 		case 2:
-		case 4:
-		case 6:
-		case 5:
-			return true;
+			return x.b === y.b;
 
-		case 9:
+		case 5:
 			return x.c === y.c;
 
-		case 7:
+		case 3:
+		case 4:
 		case 8:
-		case 12:
 			return _Json_equality(x.b, y.b);
 
-		case 10:
+		case 6:
 			return x.d === y.d && _Json_equality(x.b, y.b);
 
-		case 11:
+		case 7:
 			return x.e === y.e && _Json_equality(x.b, y.b);
 
-		case 13:
+		case 9:
 			return x.f === y.f && _Json_listEquality(x.g, y.g);
 
-		case 14:
+		case 10:
 			return x.h === y.h && _Json_equality(x.b, y.b);
 
-		case 15:
+		case 11:
 			return _Json_listEquality(x.g, y.g);
 	}
 }
@@ -2788,7 +2804,7 @@ function _VirtualDom_applyFacts(domNode, eventNode, facts)
 		key === 'a4'
 			? _VirtualDom_applyAttrsNS(domNode, value)
 			:
-		(key !== 'value' || key !== 'checked' || domNode[key] !== value) && (domNode[key] = value);
+		((key !== 'value' && key !== 'checked') || domNode[key] !== value) && (domNode[key] = value);
 	}
 }
 
@@ -2817,7 +2833,7 @@ function _VirtualDom_applyAttrs(domNode, attrs)
 	for (var key in attrs)
 	{
 		var value = attrs[key];
-		value
+		typeof value !== 'undefined'
 			? domNode.setAttribute(key, value)
 			: domNode.removeAttribute(key);
 	}
@@ -2836,7 +2852,7 @@ function _VirtualDom_applyAttrsNS(domNode, nsAttrs)
 		var namespace = pair.f;
 		var value = pair.o;
 
-		value
+		typeof value !== 'undefined'
 			? domNode.setAttributeNS(namespace, key, value)
 			: domNode.removeAttributeNS(namespace, key);
 	}
@@ -3299,6 +3315,9 @@ function _VirtualDom_diffKeyedKids(xParent, yParent, patches, rootIndex)
 		var xNode = x.b;
 		var yNode = y.b;
 
+		var newMatch = undefined;
+		var oldMatch = undefined;
+
 		// check if keys match
 
 		if (xKey === yKey)
@@ -3321,14 +3340,14 @@ function _VirtualDom_diffKeyedKids(xParent, yParent, patches, rootIndex)
 		{
 			var xNextKey = xNext.a;
 			var xNextNode = xNext.b;
-			var oldMatch = yKey === xNextKey;
+			oldMatch = yKey === xNextKey;
 		}
 
 		if (yNext)
 		{
 			var yNextKey = yNext.a;
 			var yNextNode = yNext.b;
-			var newMatch = xKey === yNextKey;
+			newMatch = xKey === yNextKey;
 		}
 
 
@@ -3863,6 +3882,7 @@ function _VirtualDom_dekey(keyedNode)
 
 
 
+
 // ELEMENT
 
 
@@ -3938,10 +3958,15 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 // ANIMATION
 
 
+var _Browser_cancelAnimationFrame =
+	typeof cancelAnimationFrame !== 'undefined'
+		? cancelAnimationFrame
+		: function(id) { clearTimeout(id); };
+
 var _Browser_requestAnimationFrame =
 	typeof requestAnimationFrame !== 'undefined'
 		? requestAnimationFrame
-		: function(callback) { setTimeout(callback, 1000 / 60); };
+		: function(callback) { return setTimeout(callback, 1000 / 60); };
 
 
 function _Browser_makeAnimator(model, draw)
@@ -3991,7 +4016,7 @@ function _Browser_application(impl)
 
 			return F2(function(domNode, event)
 			{
-				if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button < 1 && !domNode.target && !domNode.download)
+				if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button < 1 && !domNode.target && !domNode.hasAttribute('download'))
 				{
 					event.preventDefault();
 					var href = domNode.href;
@@ -4103,12 +4128,12 @@ function _Browser_rAF()
 {
 	return _Scheduler_binding(function(callback)
 	{
-		var id = requestAnimationFrame(function() {
+		var id = _Browser_requestAnimationFrame(function() {
 			callback(_Scheduler_succeed(Date.now()));
 		});
 
 		return function() {
-			cancelAnimationFrame(id);
+			_Browser_cancelAnimationFrame(id);
 		};
 	});
 }
@@ -5125,9 +5150,9 @@ var jschomay$elm_bounded_number$Number$Bounded$value = function (_n0) {
 	var n = _n0.a.n;
 	return n;
 };
-var elm$core$Basics$min = F2(
-	function (x, y) {
-		return (_Utils_cmp(x, y) < 0) ? x : y;
+var elm$core$Basics$clamp = F3(
+	function (low, high, number) {
+		return (_Utils_cmp(number, low) < 0) ? low : ((_Utils_cmp(number, high) > 0) ? high : number);
 	});
 var jschomay$elm_bounded_number$Number$Bounded$Bounded = function (a) {
 	return {$: 'Bounded', a: a};
@@ -5140,10 +5165,7 @@ var jschomay$elm_bounded_number$Number$Bounded$set = F2(
 			{
 				max: max,
 				min: min,
-				n: A2(
-					elm$core$Basics$max,
-					min,
-					A2(elm$core$Basics$min, max, n))
+				n: A3(elm$core$Basics$clamp, min, max, n)
 			});
 	});
 var jschomay$elm_paginate$Paginate$Custom$Paginated = function (a) {
@@ -5271,7 +5293,7 @@ var jschomay$elm_bounded_number$Number$Bounded$inc = F2(
 			{
 				max: max,
 				min: min,
-				n: A2(elm$core$Basics$min, max, n + by)
+				n: A3(elm$core$Basics$clamp, min, max, n + by)
 			});
 	});
 var jschomay$elm_paginate$Paginate$Custom$next = function (_n0) {
@@ -5293,7 +5315,7 @@ var jschomay$elm_bounded_number$Number$Bounded$dec = F2(
 			{
 				max: max,
 				min: min,
-				n: A2(elm$core$Basics$max, min, n - by)
+				n: A3(elm$core$Basics$clamp, min, max, n - by)
 			});
 	});
 var jschomay$elm_paginate$Paginate$Custom$prev = function (_n0) {
@@ -5392,6 +5414,7 @@ var elm$html$Html$div = _VirtualDom_node('div');
 var elm$html$Html$input = _VirtualDom_node('input');
 var elm$html$Html$li = _VirtualDom_node('li');
 var elm$html$Html$option = _VirtualDom_node('option');
+var elm$html$Html$p = _VirtualDom_node('p');
 var elm$html$Html$select = _VirtualDom_node('select');
 var elm$html$Html$span = _VirtualDom_node('span');
 var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
@@ -5416,6 +5439,7 @@ var elm$html$Html$Attributes$stringProperty = F2(
 			elm$json$Json$Encode$string(string));
 	});
 var elm$html$Html$Attributes$placeholder = elm$html$Html$Attributes$stringProperty('placeholder');
+var elm$html$Html$Attributes$selected = elm$html$Html$Attributes$boolProperty('selected');
 var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
 var elm$html$Html$Attributes$value = elm$html$Html$Attributes$stringProperty('value');
@@ -5492,6 +5516,285 @@ var jschomay$elm_paginate$Paginate$Custom$currentPage = function (_n0) {
 	return jschomay$elm_bounded_number$Number$Bounded$value(currentPage_);
 };
 var jschomay$elm_paginate$Paginate$currentPage = jschomay$elm_paginate$Paginate$Custom$currentPage;
+var elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3(elm$core$List$foldr, elm$core$List$cons, ys, xs);
+		}
+	});
+var elm$core$List$concat = function (lists) {
+	return A3(elm$core$List$foldr, elm$core$List$append, _List_Nil, lists);
+};
+var elm$core$List$intersperse = F2(
+	function (sep, xs) {
+		if (!xs.b) {
+			return _List_Nil;
+		} else {
+			var hd = xs.a;
+			var tl = xs.b;
+			var step = F2(
+				function (x, rest) {
+					return A2(
+						elm$core$List$cons,
+						sep,
+						A2(elm$core$List$cons, x, rest));
+				});
+			var spersed = A3(elm$core$List$foldr, step, _List_Nil, tl);
+			return A2(elm$core$List$cons, hd, spersed);
+		}
+	});
+var elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var elm$core$Dict$empty = elm$core$Dict$RBEmpty_elm_builtin;
+var elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var elm$core$Set$empty = elm$core$Set$Set_elm_builtin(elm$core$Dict$empty);
+var elm$core$Dict$Black = {$: 'Black'};
+var elm$core$Dict$RBNode_elm_builtin = F5(
+	function (a, b, c, d, e) {
+		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
+	});
+var elm$core$Basics$compare = _Utils_compare;
+var elm$core$Dict$Red = {$: 'Red'};
+var elm$core$Dict$balance = F5(
+	function (color, key, value, left, right) {
+		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
+			var _n1 = right.a;
+			var rK = right.b;
+			var rV = right.c;
+			var rLeft = right.d;
+			var rRight = right.e;
+			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+				var _n3 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var lLeft = left.d;
+				var lRight = left.e;
+				return A5(
+					elm$core$Dict$RBNode_elm_builtin,
+					elm$core$Dict$Red,
+					key,
+					value,
+					A5(elm$core$Dict$RBNode_elm_builtin, elm$core$Dict$Black, lK, lV, lLeft, lRight),
+					A5(elm$core$Dict$RBNode_elm_builtin, elm$core$Dict$Black, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					elm$core$Dict$RBNode_elm_builtin,
+					color,
+					rK,
+					rV,
+					A5(elm$core$Dict$RBNode_elm_builtin, elm$core$Dict$Red, key, value, left, rLeft),
+					rRight);
+			}
+		} else {
+			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
+				var _n5 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var _n6 = left.d;
+				var _n7 = _n6.a;
+				var llK = _n6.b;
+				var llV = _n6.c;
+				var llLeft = _n6.d;
+				var llRight = _n6.e;
+				var lRight = left.e;
+				return A5(
+					elm$core$Dict$RBNode_elm_builtin,
+					elm$core$Dict$Red,
+					lK,
+					lV,
+					A5(elm$core$Dict$RBNode_elm_builtin, elm$core$Dict$Black, llK, llV, llLeft, llRight),
+					A5(elm$core$Dict$RBNode_elm_builtin, elm$core$Dict$Black, key, value, lRight, right));
+			} else {
+				return A5(elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
+			}
+		}
+	});
+var elm$core$Dict$insertHelp = F3(
+	function (key, value, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return A5(elm$core$Dict$RBNode_elm_builtin, elm$core$Dict$Red, key, value, elm$core$Dict$RBEmpty_elm_builtin, elm$core$Dict$RBEmpty_elm_builtin);
+		} else {
+			var nColor = dict.a;
+			var nKey = dict.b;
+			var nValue = dict.c;
+			var nLeft = dict.d;
+			var nRight = dict.e;
+			var _n1 = A2(elm$core$Basics$compare, key, nKey);
+			switch (_n1.$) {
+				case 'LT':
+					return A5(
+						elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						A3(elm$core$Dict$insertHelp, key, value, nLeft),
+						nRight);
+				case 'EQ':
+					return A5(elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
+				default:
+					return A5(
+						elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						nLeft,
+						A3(elm$core$Dict$insertHelp, key, value, nRight));
+			}
+		}
+	});
+var elm$core$Dict$insert = F3(
+	function (key, value, dict) {
+		var _n0 = A3(elm$core$Dict$insertHelp, key, value, dict);
+		if ((_n0.$ === 'RBNode_elm_builtin') && (_n0.a.$ === 'Red')) {
+			var _n1 = _n0.a;
+			var k = _n0.b;
+			var v = _n0.c;
+			var l = _n0.d;
+			var r = _n0.e;
+			return A5(elm$core$Dict$RBNode_elm_builtin, elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _n0;
+			return x;
+		}
+	});
+var elm$core$Set$insert = F2(
+	function (key, _n0) {
+		var dict = _n0.a;
+		return elm$core$Set$Set_elm_builtin(
+			A3(elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var elm$core$Set$fromList = function (list) {
+	return A3(elm$core$List$foldl, elm$core$Set$insert, elm$core$Set$empty, list);
+};
+var jschomay$elm_bounded_number$Number$Bounded$minBound = function (_n0) {
+	var min = _n0.a.min;
+	return min;
+};
+var elm$core$Tuple$mapSecond = F2(
+	function (func, _n0) {
+		var x = _n0.a;
+		var y = _n0.b;
+		return _Utils_Tuple2(
+			x,
+			func(y));
+	});
+var elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return elm$core$Maybe$Just(x);
+	} else {
+		return elm$core$Maybe$Nothing;
+	}
+};
+var elm$core$Tuple$second = function (_n0) {
+	var y = _n0.b;
+	return y;
+};
+var jschomay$elm_paginate$Paginate$Custom$accumulateWindowGroups = F2(
+	function (page_, windows) {
+		if (!windows.b) {
+			return _List_fromArray(
+				[
+					_Utils_Tuple2(page_, _List_Nil)
+				]);
+		} else {
+			var currentWindow = windows.a;
+			var remainingWindows = windows.b;
+			var prevPage = function () {
+				var _n1 = elm$core$List$head(currentWindow.b);
+				if (_n1.$ === 'Just') {
+					var prevPage_ = _n1.a;
+					return prevPage_;
+				} else {
+					return currentWindow.a;
+				}
+			}();
+			return ((page_ - prevPage) > 1) ? A2(
+				elm$core$List$cons,
+				_Utils_Tuple2(page_, _List_Nil),
+				windows) : A2(
+				elm$core$List$cons,
+				A2(
+					elm$core$Tuple$mapSecond,
+					function (list) {
+						return A2(elm$core$List$cons, page_, list);
+					},
+					currentWindow),
+				remainingWindows);
+		}
+	});
+var jschomay$elm_paginate$Paginate$Custom$groupWindows = function (pages) {
+	return A2(
+		elm$core$List$map,
+		function (_n0) {
+			var x = _n0.a;
+			var xs = _n0.b;
+			return A2(elm$core$List$cons, x, xs);
+		},
+		elm$core$List$reverse(
+			A2(
+				elm$core$List$map,
+				elm$core$Tuple$mapSecond(elm$core$List$reverse),
+				A3(elm$core$List$foldl, jschomay$elm_paginate$Paginate$Custom$accumulateWindowGroups, _List_Nil, pages))));
+};
+var jschomay$elm_paginate$Paginate$Custom$elidedPager = F2(
+	function (options, _n0) {
+		var currentPage_ = _n0.a.currentPage_;
+		var rightWindow = (options.outerWindow <= 0) ? _List_Nil : A2(
+			elm$core$List$range,
+			jschomay$elm_bounded_number$Number$Bounded$value(
+				A2(
+					jschomay$elm_bounded_number$Number$Bounded$set,
+					jschomay$elm_bounded_number$Number$Bounded$maxBound(currentPage_) - (options.outerWindow - 1),
+					currentPage_)),
+			jschomay$elm_bounded_number$Number$Bounded$maxBound(currentPage_));
+		var leftWindow = (options.outerWindow <= 0) ? _List_Nil : A2(
+			elm$core$List$range,
+			jschomay$elm_bounded_number$Number$Bounded$minBound(currentPage_),
+			jschomay$elm_bounded_number$Number$Bounded$value(
+				A2(
+					jschomay$elm_bounded_number$Number$Bounded$set,
+					jschomay$elm_bounded_number$Number$Bounded$minBound(currentPage_) + (options.outerWindow - 1),
+					currentPage_)));
+		var currentPageNumber = jschomay$elm_bounded_number$Number$Bounded$value(currentPage_);
+		var innerWindow = A2(
+			elm$core$List$range,
+			A3(
+				elm$core$Basics$clamp,
+				jschomay$elm_bounded_number$Number$Bounded$minBound(currentPage_),
+				currentPageNumber,
+				currentPageNumber - options.innerWindow),
+			A3(
+				elm$core$Basics$clamp,
+				currentPageNumber,
+				jschomay$elm_bounded_number$Number$Bounded$maxBound(currentPage_),
+				currentPageNumber + options.innerWindow));
+		return elm$core$List$concat(
+			A2(
+				elm$core$List$intersperse,
+				_List_fromArray(
+					[options.gapView]),
+				A2(
+					elm$core$List$map,
+					elm$core$List$map(
+						function (i) {
+							return A2(
+								options.pageNumberView,
+								i,
+								_Utils_eq(i, currentPageNumber));
+						}),
+					jschomay$elm_paginate$Paginate$Custom$groupWindows(
+						elm$core$Set$toList(
+							elm$core$Set$fromList(
+								_Utils_ap(
+									leftWindow,
+									_Utils_ap(innerWindow, rightWindow))))))));
+	});
+var jschomay$elm_paginate$Paginate$elidedPager = jschomay$elm_paginate$Paginate$Custom$elidedPager;
 var jschomay$elm_paginate$Paginate$Custom$foldMap = F2(
 	function (f, _n0) {
 		var items = _n0.a.items;
@@ -5742,6 +6045,12 @@ var jschomay$elm_paginate$Example$view = function (filteredSortedThings) {
 						elm$core$String$fromInt(index))
 					]));
 		});
+	var pagerOptions = {
+		gapView: elm$html$Html$text('...'),
+		innerWindow: 1,
+		outerWindow: 1,
+		pageNumberView: pagerButtonView
+	};
 	var nextButtons = _List_fromArray(
 		[
 			A2(
@@ -5787,7 +6096,18 @@ var jschomay$elm_paginate$Example$view = function (filteredSortedThings) {
 						elm$html$Html$option,
 						_List_fromArray(
 							[
-								elm$html$Html$Attributes$value('10')
+								elm$html$Html$Attributes$value('3')
+							]),
+						_List_fromArray(
+							[
+								elm$html$Html$text('3')
+							])),
+						A2(
+						elm$html$Html$option,
+						_List_fromArray(
+							[
+								elm$html$Html$Attributes$value('10'),
+								elm$html$Html$Attributes$selected(true)
 							]),
 						_List_fromArray(
 							[
@@ -5961,7 +6281,22 @@ var jschomay$elm_paginate$Example$view = function (filteredSortedThings) {
 							_List_Nil,
 							A2(jschomay$elm_paginate$Paginate$pager, pagerButtonView, filteredSortedThings))
 						]),
-					nextButtons))));
+					_Utils_ap(
+						nextButtons,
+						_List_fromArray(
+							[
+								A2(
+								elm$html$Html$p,
+								_List_Nil,
+								_List_fromArray(
+									[
+										elm$html$Html$text('Elidied pager (set items per page to 3 to see it elide)')
+									])),
+								A2(
+								elm$html$Html$span,
+								_List_Nil,
+								A2(jschomay$elm_paginate$Paginate$elidedPager, pagerOptions, filteredSortedThings))
+							]))))));
 };
 var jschomay$elm_paginate$Example$main = elm$browser$Browser$sandbox(
 	{
