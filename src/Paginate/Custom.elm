@@ -39,8 +39,8 @@ Functions to help build a "pager" and useful paging data
 
 -}
 
-import List.Extra
 import Number.Bounded as Bounded exposing (Bounded)
+import Set
 
 
 {-| The `Paginated` type wraps your custom collection and holds all of the information necessary to track pagination. It does not modify your collection in any way (unless you call `Paginate.Custom.map`).
@@ -267,8 +267,40 @@ elidedPager options (Paginated { currentPage_ }) =
     leftWindow
         ++ innerWindow
         ++ rightWindow
-        |> List.Extra.unique
-        |> List.Extra.groupWhile (\prevPageNum nextPageNum -> nextPageNum - prevPageNum == 1)
-        |> List.map (\( x, xs ) -> x :: xs)
+        |> Set.fromList
+        |> Set.toList
+        |> groupWindows
         |> List.map (List.map (\i -> options.pageNumberView i (i == currentPageNumber)))
-        |> List.Extra.intercalate [ options.gapView ]
+        |> List.intersperse [ options.gapView ]
+        |> List.concat
+
+
+groupWindows : List Int -> List (List Int)
+groupWindows pages =
+    List.foldl accumulateWindowGroups [] pages
+        |> List.map (Tuple.mapSecond List.reverse)
+        |> List.reverse
+        |> List.map (\( x, xs ) -> x :: xs)
+
+
+accumulateWindowGroups : Int -> List ( Int, List Int ) -> List ( Int, List Int )
+accumulateWindowGroups page_ windows =
+    case windows of
+        [] ->
+            [ ( page_, [] ) ]
+
+        currentWindow :: remainingWindows ->
+            let
+                prevPage =
+                    case List.head (Tuple.second currentWindow) of
+                        Just prevPage_ ->
+                            prevPage_
+
+                        Nothing ->
+                            Tuple.first currentWindow
+            in
+            if page_ - prevPage > 1 then
+                ( page_, [] ) :: windows
+
+            else
+                Tuple.mapSecond (\list -> page_ :: list) currentWindow :: remainingWindows
