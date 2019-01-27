@@ -3,8 +3,7 @@ module Paginate exposing
     , fromList, map, changeItemsPerPage
     , goTo, next, prev, first, last
     , page, allItems, foldMap
-    , pager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
-    , PagerOptions, elidedPager
+    , pager, PagerOptions, elidedPager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
     )
 
 {-| Pagination for `List`'s.
@@ -34,7 +33,7 @@ module Paginate exposing
 
 Functions to help build a "pager" and useful paging data
 
-@docs pager, PagerOptions. elidedPager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
+@docs pager, PagerOptions, elidedPager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
 
 -}
 
@@ -63,6 +62,7 @@ fromList a b =
 
     filtered =
         Paginate.map (List.filter isFavorited) myPaginatedList
+
 
     -- the paginated list now only contains the items matching your filter
     -- also the number of pages will update to stay in sync
