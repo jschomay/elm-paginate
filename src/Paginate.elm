@@ -209,8 +209,8 @@ page =
 
     fromList 2 [ 1, 2, 3, 4, 5, 6 ]
         |> next
-        |> pager (,)
-    -- equals [ (1, False), (2, True), (3, False) ]
+        |> pager (\pageNum, isCurrentPage -> ( pageNum, isCurrentPage ))
+    -- equals [ ( 1, False ), ( 2, True ), ( 3, False ) ]
 
 
     pagerView =
