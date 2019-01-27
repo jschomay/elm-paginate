@@ -6,6 +6,21 @@ import Paginate exposing (..)
 import Test exposing (..)
 
 
+pagerOptions : { innerWindow : Int, outerWindow : Int } -> PagerOptions String
+pagerOptions { innerWindow, outerWindow } =
+    { innerWindow = innerWindow
+    , outerWindow = outerWindow
+    , pageNumberView =
+        \pageNum isCurrentPage ->
+            if isCurrentPage then
+                ">" ++ String.fromInt pageNum ++ "<"
+
+            else
+                String.fromInt pageNum
+    , gapView = "..."
+    }
+
+
 all : Test
 all =
     describe "Paginate"
@@ -146,5 +161,27 @@ all =
                 \_ ->
                     Expect.equal [ ( 1, False ), ( 2, True ), ( 3, False ) ]
                         (pager (\a b -> ( a, b )) <| next <| fromList 2 [ 1, 2, 3, 4, 5, 6 ])
+            ]
+        , describe "elidedPager"
+            [ test "makes an elided pager" <|
+                \_ ->
+                    Expect.equal [ "1", "...", "4", ">5<", "6", "...", "10" ]
+                        (elidedPager (pagerOptions { innerWindow = 1, outerWindow = 1 }) <| goTo 5 <| fromList 2 (List.range 1 20))
+            , test "has two groups when current page is near the beginning" <|
+                \_ ->
+                    Expect.equal [ "1", "2", ">3<", "4", "...", "10" ]
+                        (elidedPager (pagerOptions { innerWindow = 1, outerWindow = 1 }) <| goTo 3 <| fromList 2 (List.range 1 20))
+            , test "has two groups when current page is near the end" <|
+                \_ ->
+                    Expect.equal [ "1", "...", "8", ">9<", "10" ]
+                        (elidedPager (pagerOptions { innerWindow = 1, outerWindow = 1 }) <| goTo 9 <| fromList 2 (List.range 1 20))
+            , test "has one group when windows are larger than totalPages" <|
+                \_ ->
+                    Expect.equal [ "1", ">2<", "3" ]
+                        (elidedPager (pagerOptions { innerWindow = 4, outerWindow = 4 }) <| next <| fromList 2 (List.range 1 6))
+            , test "treats negative window widths as 0" <|
+                \_ ->
+                    Expect.equal [ ">5<" ]
+                        (elidedPager (pagerOptions { innerWindow = -1, outerWindow = -11 }) <| goTo 5 <| fromList 2 (List.range 1 20))
             ]
         ]
