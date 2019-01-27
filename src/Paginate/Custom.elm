@@ -3,7 +3,7 @@ module Paginate.Custom exposing
     , init, map, changeItemsPerPage
     , goTo, next, prev, first, last
     , page, foldMap
-    , pager, currentPage, itemsPerPage, totalPages, isFirst, isLast
+    , pager, PagerOptions, elidedPager, currentPage, itemsPerPage, totalPages, isFirst, isLast
     )
 
 {-| Pagination for custom collection types.
@@ -35,11 +35,12 @@ Only use this module if you want to paginate something other than a `List`. This
 
 Functions to help build a "pager" and useful paging data
 
-@docs pager, currentPage, itemsPerPage, totalPages, isFirst, isLast
+@docs pager, PagerOptions, elidedPager, currentPage, itemsPerPage, totalPages, isFirst, isLast
 
 -}
 
 import Number.Bounded as Bounded exposing (Bounded)
+import Set
 
 
 {-| The `Paginated` type wraps your custom collection and holds all of the information necessary to track pagination. It does not modify your collection in any way (unless you call `Paginate.Custom.map`).
@@ -180,3 +181,126 @@ pager : (Int -> Bool -> b) -> Paginated a -> List b
 pager f (Paginated { currentPage_ }) =
     List.range 1 (Bounded.maxBound currentPage_)
         |> List.map (\i -> f i (i == Bounded.value currentPage_))
+
+
+{-| `PagerOptions` is used by the `elidedPager` function to configure window sizes and output format. See `elidedPager` for examples of its use. The available options are as follows:
+
+
+### `innerWindow`
+
+The number of page numbers to display on either side of the current page number. A negative number will be treated as `0`.
+
+
+### `outerWindow`
+
+The number of page numbers to display at the beginning and end of the page numbers. `0` means that the first and last pages will not be displayed. A negative number will be treated as `0`.
+
+
+### `pageNumberView`
+
+How to display the page numbers provided by the pager.
+
+
+### `gapView`
+
+How to represent the gaps between page windows (if there are any).
+
+-}
+type alias PagerOptions a =
+    { innerWindow : Int, outerWindow : Int, pageNumberView : Int -> Bool -> a, gapView : a }
+
+
+{-| Builds an "elided" pager, which displays a "gap" placeholder in-between the first and last page(s) and the current page, if there are enough pages to justify doing so. This is useful for large collections where the number of pages might be huge and you don't want to display all of the page numbers at once.
+
+    renderPageNumberString pageNum isCurrentPage =
+        if isCurrentPage then
+            ">" ++ String.fromInt pageNum ++ "<"
+
+        else
+            String.fromInt pageNum
+
+    pagerOptions =
+        { innerWindow = 1
+        , outerWindow = 1
+        , pageNumberView = renderPageNumberString
+        , gapView = "..."
+        }
+
+    paginatedList = fromList 2 (List.range 20) |> goTo 5
+
+    elidedPager pagerOptions paginatedList
+    --> [ "1", "...", "4", ">5<", "6", "...", "10" ]
+
+    elidedPager { pagerOptions | innerWindow = 0, outerWindow = 0 } paginatedList
+    --> [ ">5<" ]
+
+-}
+elidedPager : PagerOptions b -> Paginated a -> List b
+elidedPager options (Paginated { currentPage_ }) =
+    let
+        currentPageNumber =
+            Bounded.value currentPage_
+
+        leftWindow =
+            if options.outerWindow <= 0 then
+                []
+
+            else
+                List.range
+                    (Bounded.minBound currentPage_)
+                    (Bounded.set (Bounded.minBound currentPage_ + (options.outerWindow - 1)) currentPage_ |> Bounded.value)
+
+        rightWindow =
+            if options.outerWindow <= 0 then
+                []
+
+            else
+                List.range
+                    (Bounded.set (Bounded.maxBound currentPage_ - (options.outerWindow - 1)) currentPage_ |> Bounded.value)
+                    (Bounded.maxBound currentPage_)
+
+        innerWindow =
+            List.range
+                (Basics.clamp (Bounded.minBound currentPage_) currentPageNumber (currentPageNumber - options.innerWindow))
+                (Basics.clamp currentPageNumber (Bounded.maxBound currentPage_) (currentPageNumber + options.innerWindow))
+    in
+    leftWindow
+        ++ innerWindow
+        ++ rightWindow
+        |> Set.fromList
+        |> Set.toList
+        |> groupWindows
+        |> List.map (List.map (\i -> options.pageNumberView i (i == currentPageNumber)))
+        |> List.intersperse [ options.gapView ]
+        |> List.concat
+
+
+groupWindows : List Int -> List (List Int)
+groupWindows pages =
+    List.foldl accumulateWindowGroups [] pages
+        |> List.map (Tuple.mapSecond List.reverse)
+        |> List.reverse
+        |> List.map (\( x, xs ) -> x :: xs)
+
+
+accumulateWindowGroups : Int -> List ( Int, List Int ) -> List ( Int, List Int )
+accumulateWindowGroups page_ windows =
+    case windows of
+        [] ->
+            [ ( page_, [] ) ]
+
+        currentWindow :: remainingWindows ->
+            let
+                prevPage =
+                    case List.head (Tuple.second currentWindow) of
+                        Just prevPage_ ->
+                            prevPage_
+
+                        Nothing ->
+                            Tuple.first currentWindow
+            in
+            if page_ - prevPage > 1 then
+                ( page_, [] ) :: windows
+
+            else
+                Tuple.mapSecond (\list -> page_ :: list) currentWindow :: remainingWindows

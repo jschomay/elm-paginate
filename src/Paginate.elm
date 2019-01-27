@@ -4,6 +4,7 @@ module Paginate exposing
     , goTo, next, prev, first, last
     , page, allItems, foldMap
     , pager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
+    , PagerOptions, elidedPager
     )
 
 {-| Pagination for `List`'s.
@@ -33,7 +34,7 @@ module Paginate exposing
 
 Functions to help build a "pager" and useful paging data
 
-@docs pager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
+@docs pager, PagerOptions. elidedPager, length, currentPage, itemsPerPage, totalPages, isFirst, isLast
 
 -}
 
@@ -62,7 +63,6 @@ fromList a b =
 
     filtered =
         Paginate.map (List.filter isFavorited) myPaginatedList
-
 
     -- the paginated list now only contains the items matching your filter
     -- also the number of pages will update to stay in sync
@@ -209,8 +209,8 @@ page =
 
     fromList 2 [ 1, 2, 3, 4, 5, 6 ]
         |> next
-        |> pager (,)
-    -- equals [ (1, False), (2, True), (3, False) ]
+        |> pager (\pageNum, isCurrentPage -> ( pageNum, isCurrentPage ))
+    -- equals [ ( 1, False ), ( 2, True ), ( 3, False ) ]
 
 
     pagerView =
@@ -221,3 +221,60 @@ page =
 pager : (Int -> Bool -> b) -> PaginatedList a -> List b
 pager =
     Paginate.Custom.pager
+
+
+{-| `PagerOptions` is used by the `elidedPager` function to configure window sizes and output format. See `elidedPager` for examples of its use. The available options are as follows:
+
+
+### `innerWindow`
+
+The number of page numbers to display on either side of the current page number. A negative number will be treated as `0`.
+
+
+### `outerWindow`
+
+The number of page numbers to display at the beginning and end of the page numbers. `0` means that the first and last pages will not be displayed. A negative number will be treated as `0`.
+
+
+### `pageNumberView`
+
+How to display the page numbers provided by the pager.
+
+
+### `gapView`
+
+How to represent the gaps between page windows (if there are any).
+
+-}
+type alias PagerOptions a =
+    Paginate.Custom.PagerOptions a
+
+
+{-| Builds an "elided" pager, which displays a "gap" placeholder in-between the first and last page(s) and the current page, if there are enough pages to justify doing so. This is useful for large collections where the number of pages might be huge and you don't want to display all of the page numbers at once.
+
+    renderPageNumberString pageNum isCurrentPage =
+        if isCurrentPage then
+            ">" ++ String.fromInt pageNum ++ "<"
+
+        else
+            String.fromInt pageNum
+
+    pagerOptions =
+        { innerWindow = 1
+        , outerWindow = 1
+        , pageNumberView = renderPageNumberString
+        , gapView = "..."
+        }
+
+    paginatedList = fromList 2 (List.range 20) |> goTo 5
+
+    elidedPager pagerOptions paginatedList
+    --> [ "1", "...", "4", ">5<", "6", "...", "10" ]
+
+    elidedPager { pagerOptions | outerWindow = 0 } paginatedList
+    --> [ "4", ">5<", "6" ]
+
+-}
+elidedPager : PagerOptions b -> PaginatedList a -> List b
+elidedPager =
+    Paginate.Custom.elidedPager
