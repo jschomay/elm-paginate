@@ -64,7 +64,6 @@ fromList a b =
     filtered =
         Paginate.map (List.filter isFavorited) myPaginatedList
 
-
     -- the paginated list now only contains the items matching your filter
     -- also the number of pages will update to stay in sync
     sorted =
