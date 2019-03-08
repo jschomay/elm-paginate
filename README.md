@@ -11,16 +11,18 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
 
     module Example exposing (main)
 
-    import Paginate exposing (..)
+    import Browser
     import Html exposing (..)
     import Html.Attributes exposing (..)
     import Html.Events exposing (..)
+    import Paginate exposing (..)
 
 
     type alias Model =
         { things : PaginatedList String
         , reversed : Bool
         , query : String
+        , globalId : Int
         }
 
 
@@ -37,10 +39,10 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
         | Find String
 
 
-    main : Program Never Model Msg
+    main : Program () Model Msg
     main =
-        Html.beginnerProgram
-            { model = init
+        Browser.sandbox
+            { init = init
             , view = filterAndSortThings >> view
             , update = update
             }
@@ -48,9 +50,14 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
 
     init : Model
     init =
-        { things = Paginate.fromList 10 <| List.map (toString >> (++) "item ") <| List.range 1 37
+        let
+            things =
+                List.map (String.fromInt >> (++) "item ") <| List.range 1 37
+        in
+        { things = Paginate.fromList 10 things
         , reversed = False
         , query = ""
+        , globalId = List.length things
         }
 
 
@@ -75,23 +82,29 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
             ChangePageSize size ->
                 let
                     sizeAsInt =
-                        Result.withDefault 10 <| String.toInt size
+                        Maybe.withDefault 10 <| String.toInt size
                 in
-                    { model | things = Paginate.changeItemsPerPage sizeAsInt model.things }
+                { model | things = Paginate.changeItemsPerPage sizeAsInt model.things }
 
             DeleteItem item ->
                 let
                     removeItem =
                         List.filter ((/=) item)
                 in
-                    { model | things = Paginate.map removeItem model.things }
+                { model | things = Paginate.map removeItem model.things }
 
             AddItem ->
                 let
+                    newId =
+                        model.globalId + 1
+
                     addItem existing =
-                        existing ++ (List.repeat 1 "new item")
+                        existing ++ [ "new item " ++ String.fromInt newId ]
                 in
-                    { model | things = Paginate.map addItem model.things }
+                { model
+                    | things = Paginate.map addItem model.things
+                    , globalId = newId
+                }
 
             Reverse ->
                 { model | reversed = not model.reversed }
@@ -106,16 +119,18 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
             sort =
                 if model.reversed then
                     List.reverse
+
                 else
                     identity
 
             filter =
                 if model.query == "" then
                     identity
+
                 else
-                    List.filter (\thing -> String.contains model.query (toString thing))
+                    List.filter (\thing -> String.contains model.query thing)
         in
-            Paginate.map (filter >> sort) model.things
+        Paginate.map (filter >> sort) model.things
 
 
     view : PaginatedList String -> Html Msg
@@ -127,26 +142,26 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
                         [ text <|
                             String.join " " <|
                                 [ "showing"
-                                , (toString <| List.length <| Paginate.page filteredSortedThings)
+                                , String.fromInt <| List.length <| Paginate.page filteredSortedThings
                                 , "of"
-                                , (toString <| Paginate.length filteredSortedThings)
+                                , String.fromInt <| Paginate.length filteredSortedThings
                                 , "items"
                                 ]
-                        , u [ onClick <| AddItem, style [ ( "cursor", "pointer" ) ] ] [ text " (add more!)" ]
+                        , u [ onClick <| AddItem, style "cursor" "pointer" ] [ text " (add more!)" ]
                         ]
                     , text <|
                         String.join " "
                             [ "page"
-                            , toString <| Paginate.currentPage filteredSortedThings
+                            , String.fromInt <| Paginate.currentPage filteredSortedThings
                             , "of"
-                            , toString <| Paginate.totalPages filteredSortedThings
+                            , String.fromInt <| Paginate.totalPages filteredSortedThings
                             ]
                     , div []
                         [ text <|
                             String.join " "
                                 [ "including"
                                 , Paginate.foldMap
-                                    (List.filter (String.contains "new item") >> List.length >> toString)
+                                    (List.filter (String.contains "new item") >> List.length >> String.fromInt)
                                     filteredSortedThings
                                 , "new items"
                                 ]
@@ -156,14 +171,15 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
             itemView item =
                 li []
                     [ span [] [ text item ]
-                    , u [ onClick <| DeleteItem item, style [ ( "cursor", "pointer" ) ] ] [ text " (delete)" ]
+                    , u [ onClick <| DeleteItem item, style "cursor" "pointer" ] [ text " (delete)" ]
                     ]
 
             itemsPerPageSelector =
                 div []
                     [ text "show"
                     , select [ onInput ChangePageSize ]
-                        [ option [ value "10" ] [ text "10" ]
+                        [ option [ value "3" ] [ text "3" ]
+                        , option [ value "10", selected True ] [ text "10" ]
                         , option [ value "20" ] [ text "20" ]
                         , option [ value "30" ] [ text "30" ]
                         ]
@@ -182,25 +198,34 @@ Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginat
 
             pagerButtonView index isActive =
                 button
-                    [ style
-                        [ ( "font-weight"
-                          , if isActive then
-                                "bold"
-                            else
-                                "normal"
-                          )
-                        ]
+                    [ style "font-weight"
+                        (if isActive then
+                            "bold"
+
+                         else
+                            "normal"
+                        )
                     , onClick <| GoTo index
                     ]
-                    [ text <| toString index ]
+                    [ text <| String.fromInt index ]
+
+            pagerOptions =
+                { innerWindow = 1
+                , outerWindow = 1
+                , pageNumberView = pagerButtonView
+                , gapView = text "..."
+                }
         in
-            div [] <|
-                [ displayInfoView
-                , itemsPerPageSelector
-                , button [ onClick Reverse ] [ text "Reverse list" ]
-                , input [ placeholder "Search...", onInput Find ] []
-                , ul [] (List.map itemView <| Paginate.page filteredSortedThings)
-                ]
-                    ++ prevButtons
-                    ++ [ span [] <| Paginate.pager pagerButtonView filteredSortedThings ]
-                    ++ nextButtons
+        div [] <|
+            [ displayInfoView
+            , itemsPerPageSelector
+            , button [ onClick Reverse ] [ text "Reverse list" ]
+            , input [ placeholder "Search...", onInput Find ] []
+            , ul [] (List.map itemView <| Paginate.page filteredSortedThings)
+            ]
+                ++ prevButtons
+                ++ [ span [] <| Paginate.pager pagerButtonView filteredSortedThings ]
+                ++ nextButtons
+                ++ [ p [] [ text "Elidied pager (set items per page to 3 to see it elide)" ]
+                   , span [] <| Paginate.elidedPager pagerOptions filteredSortedThings
+                   ]
