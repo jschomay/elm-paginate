@@ -6,7 +6,7 @@ Encapsulate your pagination concerns from the rest of your app.
 
 ## Example usage
 
-Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginate/) | [source](https://github.com/jschomay/elm-paginate/blob/master/example/src/Example.elm)).
+Below is a fully featured example ([demo](https://jschomay.github.io/elm-paginate/example) | [source](https://github.com/jschomay/elm-paginate/blob/master/example/src/Example.elm)).
 
 ```elm
 module Example exposing (main)
